@@ -408,8 +408,8 @@ function NewTicket() {
                 </div>
 
                 <div className="flex flex-wrap justify-end gap-2">
-                  <button onClick={() => navigate({ to: "/tickets" })} className="rounded-md border px-4 py-2 text-sm font-medium hover:bg-muted">Ver fila</button>
-                  <button onClick={() => navigate({ to: "/tickets/$id", params: { id: created.ticketId } })} className="rounded-md bg-primary px-5 py-2 text-sm font-medium text-primary-foreground hover:opacity-90">Abrir {created.roNumber}</button>
+                  <button onClick={() => navigate({ to: "/ocorrencias" })} className="rounded-md border px-4 py-2 text-sm font-medium hover:bg-muted">Ver fila</button>
+                  <button onClick={() => navigate({ to: "/ocorrencia/$ro", params: { ro: created.roNumber } })} className="rounded-md bg-primary px-5 py-2 text-sm font-medium text-primary-foreground hover:opacity-90">Abrir {created.roNumber}</button>
                 </div>
               </>
             ) : (
@@ -437,7 +437,7 @@ function NewTicket() {
         {/* Footer nav */}
         {!created && (
           <div className="mt-6 flex justify-between gap-2 border-t pt-4">
-            <button type="button" onClick={() => (step === 1 ? navigate({ to: "/tickets" }) : setStep(step - 1))} className="rounded-md border px-4 py-2 text-sm font-medium hover:bg-muted">
+            <button type="button" onClick={() => (step === 1 ? navigate({ to: "/ocorrencias" }) : setStep(step - 1))} className="rounded-md border px-4 py-2 text-sm font-medium hover:bg-muted">
               {step === 1 ? "Cancelar" : "Voltar"}
             </button>
             {step < 4 ? (
