@@ -7,6 +7,8 @@ import { toast } from "sonner";
 
 export const Route = createFileRoute("/login")({
   beforeLoad: async () => {
+    // SSR: localStorage not available — skip redirect check
+    if (typeof window === "undefined") return;
     const { data } = await supabase.auth.getSession();
     if (data.session) throw redirect({ to: "/dashboard" });
   },
@@ -19,13 +21,19 @@ function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setAuthError(null);
     setLoading(true);
     const { error } = await signIn(email, password);
     setLoading(false);
-    if (error) { toast.error(error); return; }
+    if (error) {
+      setAuthError(error);
+      toast.error(error);
+      return;
+    }
     toast.success("Bem-vindo!");
     navigate({ to: "/dashboard" });
   };
@@ -33,8 +41,13 @@ function LoginPage() {
   return (
     <AuthShell title="Entrar" subtitle="Acesse sua conta vpposvenda360">
       <form onSubmit={onSubmit} className="space-y-4">
-        <Field label="E-mail" type="email" value={email} onChange={setEmail} required autoFocus />
-        <Field label="Senha" type="password" value={password} onChange={setPassword} required />
+        <Field label="E-mail" type="email" value={email} onChange={(v) => { setEmail(v); setAuthError(null); }} required autoFocus />
+        <Field label="Senha" type="password" value={password} onChange={(v) => { setPassword(v); setAuthError(null); }} required />
+        {authError && (
+          <p role="alert" className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+            {authError}
+          </p>
+        )}
         <button disabled={loading} className="w-full rounded-md bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-60">
           {loading ? "Entrando..." : "Entrar"}
         </button>

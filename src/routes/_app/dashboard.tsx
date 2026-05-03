@@ -1,13 +1,29 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useStore, slaStatus } from "@/lib/store";
+import { useAuth } from "@/lib/auth";
 import { StatusBadge, PriorityBadge } from "@/components/app/StatusBadge";
 import { SlaBar } from "@/components/app/SlaBar";
 import { ArrowUpRight, Clock, AlertTriangle, CheckCircle2, MessageCircle } from "lucide-react";
 
 export const Route = createFileRoute("/_app/dashboard")({ component: OperatorDashboard });
 
+const ROLE_LABELS: Record<string, string> = {
+  operador: "Operador",
+  qualidade: "Qualidade",
+  gestor: "Gestor",
+  admin: "Admin",
+};
+
 function OperatorDashboard() {
   const { tickets } = useStore();
+  const { user, roles } = useAuth();
+
+  const rawName =
+    (user?.user_metadata?.full_name as string | undefined)?.split(" ")[0] ??
+    user?.email?.split("@")[0]?.split(".")[0] ??
+    "usuário";
+  const displayName = rawName.charAt(0).toUpperCase() + rawName.slice(1);
+  const roleLabel = roles[0] ? (ROLE_LABELS[roles[0]] ?? roles[0]) : "Operador";
   const open = tickets.filter((t) => t.status !== "concluido");
   const atRisk = open.filter((t) => slaStatus(t).tone !== "ok").length;
   const todayResolved = tickets.filter((t) => t.status === "concluido").length;
@@ -19,8 +35,8 @@ function OperatorDashboard() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="text-xs font-medium uppercase tracking-[0.18em] text-gold">Operador</p>
-          <h1 className="mt-1 text-2xl font-semibold sm:text-3xl">Bem-vinda, Maria</h1>
+          <p className="text-xs font-medium uppercase tracking-[0.18em] text-gold">{roleLabel}</p>
+          <h1 className="mt-1 text-2xl font-semibold sm:text-3xl">Olá, {displayName}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {open.length} tickets em andamento · {atRisk} demandam atenção imediata
           </p>

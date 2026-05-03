@@ -10,10 +10,13 @@ function NotFoundComponent() {
       <div className="max-w-md text-center">
         <h1 className="text-7xl font-bold text-foreground">404</h1>
         <h2 className="mt-4 text-xl font-semibold">Página não encontrada</h2>
-        <p className="mt-2 text-sm text-muted-foreground">A página solicitada não existe.</p>
-        <div className="mt-6">
-          <Link to="/" className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">
-            Voltar ao início
+        <p className="mt-2 text-sm text-muted-foreground">A página solicitada não existe ou você não tem acesso.</p>
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+          <Link to="/dashboard" className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90">
+            Ir para o painel
+          </Link>
+          <Link to="/login" className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-muted">
+            Fazer login
           </Link>
         </div>
       </div>

@@ -543,6 +543,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    if (!user?.id) return; // Don't fetch before user is authenticated
     void loadAll();
   }, [loadAll, user?.id]);
 
