@@ -1,10 +1,20 @@
-import { createServer } from "node:http";
+import { mkdir, writeFile } from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const projectRoot = path.resolve(__dirname, "..");
+const distDir = path.join(projectRoot, "dist");
+const entryPath = path.join(distDir, "server.js");
+
+const entrySource = `import { createServer } from "node:http";
 import { Readable } from "node:stream";
 
 function toWebRequest(req) {
   const protocol = req.headers["x-forwarded-proto"] || "http";
   const host = req.headers.host || "localhost";
-  const url = new URL(req.url || "/", `${protocol}://${host}`);
+  const url = new URL(req.url || "/", \`\${protocol}://\${host}\`);
 
   const headers = new Headers();
   for (const [key, value] of Object.entries(req.headers)) {
@@ -64,7 +74,7 @@ async function sendNodeResponse(webResponse, res) {
 const port = Number(process.env.PORT || 3000);
 const host = process.env.HOST || "0.0.0.0";
 
-const appModule = await import("./dist/server/server.js");
+const appModule = await import("./server/server.js");
 const app = appModule.default;
 
 if (!app || typeof app.fetch !== "function") {
@@ -85,5 +95,10 @@ const server = createServer(async (req, res) => {
 });
 
 server.listen(port, host, () => {
-  console.log(`[Hostinger Runtime] Listening on ${host}:${port}`);
+  console.log(\`[Hostinger Runtime] Listening on \${host}:\${port}\`);
 });
+`;
+
+await mkdir(distDir, { recursive: true });
+await writeFile(entryPath, entrySource, "utf8");
+console.log(`[Hostinger Runtime] Wrote ${path.relative(projectRoot, entryPath)}`);
