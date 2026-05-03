@@ -1,10 +1,19 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
 import { useStore, slaStatus } from "@/lib/store";
-import { ROOT_CAUSE_LABEL, type RootCause, type TicketStatus, STATUS_LABEL } from "@/lib/types";
+import {
+  ROOT_CAUSE_LABEL,
+  type RootCause,
+  type TicketStatus,
+  STATUS_LABEL,
+  INTERNAL_DEPT_LABEL,
+  INTERNAL_STATUS_LABEL,
+  type InternalDepartment,
+  type InternalPriority,
+} from "@/lib/types";
 import { StatusBadge, PriorityBadge } from "@/components/app/StatusBadge";
 import { SlaBar } from "@/components/app/SlaBar";
-import { ArrowLeft, ShieldCheck, Clock, User, MessageCircle, FileEdit, Star, AlertTriangle } from "lucide-react";
+import { ArrowLeft, ShieldCheck, Clock, User, MessageCircle, FileEdit, Star, AlertTriangle, Users, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/tickets/$id")({ component: TicketDetail });
@@ -12,7 +21,7 @@ export const Route = createFileRoute("/tickets/$id")({ component: TicketDetail }
 function TicketDetail() {
   const { id } = Route.useParams();
   const router = useRouter();
-  const { tickets, updateStatus, resolveTicket, setNps } = useStore();
+  const { tickets, internalTickets, updateStatus, resolveTicket, setNps, createInternalTicket } = useStore();
   const ticket = tickets.find((t) => t.id === id);
 
   if (!ticket) {
@@ -32,6 +41,9 @@ function TicketDetail() {
   const [justification, setJustification] = useState("");
   const [report, setReport] = useState("");
   const [resolveErr, setResolveErr] = useState<string | null>(null);
+  const [openInternal, setOpenInternal] = useState(false);
+
+  const linkedInternal = internalTickets.filter((it) => ticket?.internalTicketIds?.includes(it.id));
 
   function handleResolve() {
     if (!rootCause) { setResolveErr("Selecione a causa raiz."); return; }
@@ -179,6 +191,52 @@ function TicketDetail() {
       )}
 
       <div className="rounded-xl border bg-card p-6 shadow-[var(--shadow-elegant)]">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2 text-sm font-semibold">
+            <Users className="h-4 w-4 text-gold" /> Tickets internos vinculados ({linkedInternal.length})
+          </div>
+          {!isClosed && (
+            <button
+              onClick={() => setOpenInternal(true)}
+              className="inline-flex items-center gap-1.5 rounded-md border border-gold px-3 py-1.5 text-xs font-semibold text-gold-foreground hover:bg-gold-soft"
+            >
+              <Plus className="h-3 w-3" /> Abrir ticket interno
+            </button>
+          )}
+        </div>
+        {linkedInternal.length > 0 ? (
+          <ul className="mt-4 space-y-2">
+            {linkedInternal.map((it) => (
+              <li key={it.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border bg-background p-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-[11px] font-semibold text-muted-foreground">{it.code}</span>
+                    <span className="rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-medium">{INTERNAL_DEPT_LABEL[it.targetDepartment]}</span>
+                  </div>
+                  <div className="text-sm font-medium">{it.subject}</div>
+                </div>
+                <Link to="/internos" className="text-[11px] font-semibold text-gold hover:underline">
+                  {INTERNAL_STATUS_LABEL[it.status]} →
+                </Link>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-3 text-xs text-muted-foreground">Nenhum ticket interno aberto para esta ocorrência.</p>
+        )}
+      </div>
+
+      {openInternal && (
+        <QuickInternalDialog
+          onClose={() => setOpenInternal(false)}
+          onCreate={(data) => {
+            createInternalTicket({ ...data, linkedOccurrenceId: ticket.id });
+            setOpenInternal(false);
+          }}
+        />
+      )}
+
+      <div className="rounded-xl border bg-card p-6 shadow-[var(--shadow-elegant)]">
         <div className="flex items-center gap-2 text-sm font-semibold">
           <Clock className="h-4 w-4 text-gold" /> Trilha de auditoria
         </div>
@@ -213,6 +271,91 @@ function NpsCapture({ onSubmit }: { onSubmit: (n: number) => void }) {
           {i}
         </button>
       ))}
+    </div>
+  );
+}
+
+function QuickInternalDialog({
+  onClose,
+  onCreate,
+}: {
+  onClose: () => void;
+  onCreate: (data: {
+    targetDepartment: InternalDepartment;
+    priority: InternalPriority;
+    subject: string;
+    description: string;
+    slaHours: number;
+  }) => void;
+}) {
+  const [form, setForm] = useState({
+    targetDepartment: "engenharia" as InternalDepartment,
+    priority: "media" as InternalPriority,
+    subject: "",
+    description: "",
+    slaHours: 24,
+  });
+  const valid = form.subject.trim() && form.description.trim();
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="w-full max-w-lg rounded-xl border bg-card p-6 shadow-[var(--shadow-elegant)]">
+        <h2 className="text-lg font-semibold">Abrir ticket interno</h2>
+        <p className="mt-1 text-xs text-muted-foreground">Vinculado à ocorrência atual.</p>
+        <div className="mt-4 grid gap-3">
+          <select
+            value={form.targetDepartment}
+            onChange={(e) => setForm({ ...form, targetDepartment: e.target.value as InternalDepartment })}
+            className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+          >
+            {(Object.keys(INTERNAL_DEPT_LABEL) as InternalDepartment[]).map((d) => (
+              <option key={d} value={d}>{INTERNAL_DEPT_LABEL[d]}</option>
+            ))}
+          </select>
+          <div className="grid grid-cols-2 gap-3">
+            <select
+              value={form.priority}
+              onChange={(e) => setForm({ ...form, priority: e.target.value as InternalPriority })}
+              className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+            >
+              <option value="baixa">Baixa</option>
+              <option value="media">Média</option>
+              <option value="alta">Alta</option>
+              <option value="critica">Crítica</option>
+            </select>
+            <input
+              type="number"
+              min={1}
+              value={form.slaHours}
+              onChange={(e) => setForm({ ...form, slaHours: Number(e.target.value) })}
+              className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+              placeholder="SLA (h)"
+            />
+          </div>
+          <input
+            value={form.subject}
+            onChange={(e) => setForm({ ...form, subject: e.target.value })}
+            className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+            placeholder="Assunto"
+          />
+          <textarea
+            value={form.description}
+            onChange={(e) => setForm({ ...form, description: e.target.value })}
+            rows={4}
+            className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+            placeholder="Descrição..."
+          />
+        </div>
+        <div className="mt-5 flex justify-end gap-2">
+          <button onClick={onClose} className="rounded-md border px-4 py-2 text-sm hover:bg-muted">Cancelar</button>
+          <button
+            disabled={!valid}
+            onClick={() => onCreate(form)}
+            className="rounded-md bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50"
+          >
+            Abrir
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
