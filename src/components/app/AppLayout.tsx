@@ -70,43 +70,19 @@ export function AppLayout() {
 
   return (
     <div className="min-h-screen bg-muted/30">
-      {/* Dark sidebar — Behance-inspired (icon rail + expanded panel) */}
+      {/* Dark sidebar */}
       <aside className="fixed inset-y-0 left-0 z-40 hidden lg:flex">
-        {/* Icon rail */}
-        <div className="flex w-[68px] flex-col items-center gap-2 bg-[#0e0e10] py-5 ring-1 ring-white/5">
-          <div className="mb-2 flex flex-col items-center px-1 text-center">
-            <span className="text-[8px] font-semibold uppercase leading-tight tracking-[0.12em] text-white/70">Pós-Venda</span>
-            <span className="text-[10px] font-bold leading-tight text-gold">360°</span>
-          </div>
-          <div className="my-2 h-px w-8 bg-white/10" />
-          {railItems.map((n) => {
-            const active = path === n.to || path.startsWith(n.to + "/");
-            const Icon = n.icon;
-            return (
-              <Link key={n.to} to={n.to} title={n.label}
-                className={cn(
-                  "flex h-10 w-10 items-center justify-center rounded-lg transition-colors",
-                  active
-                    ? "bg-white/10 text-white ring-1 ring-white/15"
-                    : "text-white/50 hover:bg-white/5 hover:text-white"
-                )}>
-                <Icon className="h-[18px] w-[18px]" />
-              </Link>
-            );
-          })}
-          <div className="mt-auto flex flex-col items-center gap-3">
-            <button className="text-white/40 hover:text-white"><MoreHorizontal className="h-5 w-5" /></button>
-          </div>
-        </div>
-
-        {/* Expanded panel */}
-        <div className="flex w-60 flex-col bg-[#141416] text-white ring-1 ring-white/5">
-          <div className="flex items-center justify-center px-4 py-4">
+        <div className="flex w-56 flex-col bg-[#141416] text-white ring-1 ring-white/5">
+          <div className="flex flex-col items-center gap-2 px-4 pb-3 pt-5">
             <img
               src="https://sfpnjwllcmentoocylow.supabase.co/storage/v1/object/public/avatars/avatars/CINZA%20E%20AMARELO.png"
               alt="VerticalParts"
-              className="h-12 w-auto object-contain"
+              className="h-11 w-auto object-contain"
             />
+            <div className="flex items-baseline gap-1">
+              <span className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/70">Pós-Venda</span>
+              <span className="text-[11px] font-bold text-gold">360°</span>
+            </div>
           </div>
           <nav className="flex-1 overflow-y-auto px-3 pb-4">
             {visible.map((g) => (
@@ -193,7 +169,7 @@ export function AppLayout() {
         </div>
       )}
 
-      <main className="lg:pl-[308px]">
+      <main className="lg:pl-56">
         <div className="sticky top-0 z-20 hidden items-center justify-between border-b bg-background/80 px-8 py-4 backdrop-blur lg:flex">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Search className="h-4 w-4" />
