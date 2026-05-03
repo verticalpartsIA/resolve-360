@@ -47,8 +47,8 @@ function MyTickets() {
               {mine.map((t) => (
                 <tr key={t.id} className="border-t hover:bg-muted/30">
                   <td className="px-4 py-3 font-medium">
-                    <Link to="/ocorrencia/$ro" params={{ ro: t.roNumber }} className="hover:text-gold">
-                      {t.roNumber}
+                    <Link to="/ocorrencia/$ro" params={{ ro: t.roNumber ?? t.code }} className="hover:text-gold">
+                      {t.roNumber ?? t.code}
                     </Link>
                   </td>
                   <td className="px-4 py-3">{t.customer}</td>

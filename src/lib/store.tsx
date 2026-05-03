@@ -338,7 +338,7 @@ function mapTicket(
       !!row.resolved_at &&
       new Date(row.resolved_at).getTime() >
         new Date(row.created_at).getTime() + row.sla_hours * 60 * 60 * 1000,
-    channel: row.channel,
+    channel: (row.channel === "whatsapp" ? "whatsapp" : "manual"),
     status: normalizeTicketStatus(row.status),
     priority: row.priority,
     slaHours: row.sla_hours,
