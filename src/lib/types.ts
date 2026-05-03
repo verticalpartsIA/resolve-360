@@ -247,3 +247,71 @@ export const PRIORITY_LABEL: Record<TicketPriority, string> = {
   alta: "Alta",
   critica: "Crítica",
 };
+
+// ===== NPS (CALCULADORANPS.xlsx) =====
+export type NpsCategory = "promotor" | "neutro" | "detrator";
+export type CustomerTier = "A" | "B" | "C";
+export type NpsTrigger = "pos_resolucao" | "proativo_pos_venda" | "manual";
+
+export const NPS_CATEGORY_LABEL: Record<NpsCategory, string> = {
+  promotor: "Promotor (9-10)",
+  neutro: "Neutro (7-8)",
+  detrator: "Detrator (0-6)",
+};
+
+export const CUSTOMER_TIER_LABEL: Record<CustomerTier, string> = {
+  A: "Tipo A — B2B estratégico",
+  B: "Tipo B — B2B recorrente",
+  C: "Tipo C — B2B eventual",
+};
+
+export interface NpsRecord {
+  id: string;
+  customer: string;
+  customerTier: CustomerTier;
+  occurrenceId?: string;
+  surveyDate: string;
+  q1Recomendacao: number; // 0-10
+  q2Resolucao: number; // 0-10
+  q3Agilidade: number; // 0-10
+  category: NpsCategory; // calculado a partir de q1
+  feedback?: string;
+  audioUrl?: string;
+  feedbackTranscrito?: string;
+  trigger: NpsTrigger;
+  createdAt: string;
+}
+
+export function categorizeNps(score: number): NpsCategory {
+  if (score >= 9) return "promotor";
+  if (score >= 7) return "neutro";
+  return "detrator";
+}
+
+export interface NpsAggregate {
+  total: number;
+  promotores: number;
+  neutros: number;
+  detratores: number;
+  pctPromotores: number;
+  pctDetratores: number;
+  npsScore: number; // %Promotores - %Detratores
+}
+
+export function aggregateNps(records: NpsRecord[]): NpsAggregate {
+  const total = records.length;
+  const promotores = records.filter((r) => r.category === "promotor").length;
+  const neutros = records.filter((r) => r.category === "neutro").length;
+  const detratores = records.filter((r) => r.category === "detrator").length;
+  const pctPromotores = total ? (promotores / total) * 100 : 0;
+  const pctDetratores = total ? (detratores / total) * 100 : 0;
+  return {
+    total,
+    promotores,
+    neutros,
+    detratores,
+    pctPromotores,
+    pctDetratores,
+    npsScore: pctPromotores - pctDetratores,
+  };
+}
