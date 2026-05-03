@@ -1,7 +1,15 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { useStore } from "@/lib/store";
-import type { TicketChannel, TicketPriority } from "@/lib/types";
+import {
+  OCCURRENCE_REASON_LABEL,
+  RESPONSIBLE_SECTOR_LABEL,
+  type TicketChannel,
+  type TicketPriority,
+  type OccurrenceReason,
+  type ResponsibleSector,
+  type OccurrenceOrigin,
+} from "@/lib/types";
 import { MessageCircle, FileEdit } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -14,11 +22,18 @@ function NewTicket() {
   const [form, setForm] = useState({
     customer: "",
     customerDoc: "",
+    city: "",
+    state: "",
     part: "",
     partCode: "",
+    quantity: 1,
+    unitValue: 0,
     reason: "",
     priority: "media" as TicketPriority,
     slaHours: 48,
+    occurrenceReason: "devolucao_total" as OccurrenceReason,
+    responsibleSector: "nao_aplica" as ResponsibleSector,
+    origin: "externo" as OccurrenceOrigin,
   });
   const [err, setErr] = useState<string | null>(null);
 
@@ -53,11 +68,43 @@ function NewTicket() {
           <Field label="CNPJ / CPF">
             <input value={form.customerDoc} onChange={(e) => setForm({ ...form, customerDoc: e.target.value })} className={inputCls} placeholder="00.000.000/0000-00" />
           </Field>
+          <Field label="Cidade">
+            <input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} className={inputCls} placeholder="Cidade" />
+          </Field>
+          <Field label="UF">
+            <input value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })} className={inputCls} placeholder="SP" maxLength={2} />
+          </Field>
           <Field label="Peça *">
             <input value={form.part} onChange={(e) => setForm({ ...form, part: e.target.value })} className={inputCls} placeholder="Descrição da peça" />
           </Field>
           <Field label="Código da peça (ERP) *">
             <input value={form.partCode} onChange={(e) => setForm({ ...form, partCode: e.target.value })} className={inputCls} placeholder="Ex: PF-3421" />
+          </Field>
+          <Field label="Quantidade">
+            <input type="number" min={1} value={form.quantity} onChange={(e) => setForm({ ...form, quantity: Number(e.target.value) })} className={inputCls} />
+          </Field>
+          <Field label="Valor unitário (R$)">
+            <input type="number" min={0} step="0.01" value={form.unitValue} onChange={(e) => setForm({ ...form, unitValue: Number(e.target.value) })} className={inputCls} />
+          </Field>
+          <Field label="Motivo da ocorrência *">
+            <select value={form.occurrenceReason} onChange={(e) => setForm({ ...form, occurrenceReason: e.target.value as OccurrenceReason })} className={inputCls}>
+              {(Object.keys(OCCURRENCE_REASON_LABEL) as OccurrenceReason[]).map((k) => (
+                <option key={k} value={k}>{OCCURRENCE_REASON_LABEL[k]}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Setor responsável">
+            <select value={form.responsibleSector} onChange={(e) => setForm({ ...form, responsibleSector: e.target.value as ResponsibleSector })} className={inputCls}>
+              {(Object.keys(RESPONSIBLE_SECTOR_LABEL) as ResponsibleSector[]).map((k) => (
+                <option key={k} value={k}>{RESPONSIBLE_SECTOR_LABEL[k]}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Origem">
+            <select value={form.origin} onChange={(e) => setForm({ ...form, origin: e.target.value as OccurrenceOrigin })} className={inputCls}>
+              <option value="externo">Externo (cliente)</option>
+              <option value="interno">Interno</option>
+            </select>
           </Field>
           <Field label="Prioridade">
             <select value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value as TicketPriority })} className={inputCls}>
@@ -71,8 +118,8 @@ function NewTicket() {
             <input type="number" min={1} value={form.slaHours} onChange={(e) => setForm({ ...form, slaHours: Number(e.target.value) })} className={inputCls} />
           </Field>
         </div>
-        <Field label="Motivo da devolução *">
-          <textarea value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} rows={4} className={cn(inputCls, "resize-none")} placeholder="Descreva o problema relatado pelo cliente..." />
+        <Field label="Narrativa da ocorrência *">
+          <textarea value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} rows={4} className={cn(inputCls, "resize-none")} placeholder="Descreva o que aconteceu, sem apontar culpados — foco em entender e resolver." />
         </Field>
 
         {err && <div className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">{err}</div>}
