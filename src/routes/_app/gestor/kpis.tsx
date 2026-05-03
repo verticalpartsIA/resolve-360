@@ -314,8 +314,9 @@ function brl(n: number) {
 }
 
 function Kpi({ icon: Icon, label, value, hint, accent, ok }: { icon: React.ComponentType<{ className?: string }>; label: string; value: string; hint: string; accent?: boolean; ok?: boolean }) {
+  const tone = accent ? "border-l-primary bg-primary text-primary-foreground" : ok === false ? "border-l-destructive" : ok ? "border-l-success" : "border-l-gold";
   return (
-    <div className={`rounded-xl border p-5 shadow-[var(--shadow-elegant)] ${accent ? "bg-primary text-primary-foreground border-primary" : "bg-card"}`}>
+    <div className={`rounded-xl border border-l-4 bg-card p-5 shadow-[var(--shadow-elegant)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_16px_rgba(0,0,0,0.1)] ${tone}`}>
       <div className="flex items-center justify-between">
         <span className={`text-[11px] font-semibold uppercase tracking-wider ${accent ? "text-primary-foreground/70" : "text-muted-foreground"}`}>{label}</span>
         <Icon className="h-4 w-4 text-gold" />

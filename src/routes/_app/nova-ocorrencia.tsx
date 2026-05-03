@@ -161,20 +161,32 @@ function NewTicket() {
         </p>
       </div>
 
-      {/* Stepper */}
+      {/* Stepper — passos clicáveis */}
       <ol className="grid grid-cols-4 gap-2">
         {STEPS.map((s) => {
           const done = created ? true : step > s.n;
           const active = step === s.n;
+          const disabled = !!created;
           return (
-            <li key={s.n} className={cn("rounded-lg border bg-card p-3 transition", active && "border-gold shadow-[var(--shadow-gold)]", done && !active && "border-success/40")}>
-              <div className="flex items-center gap-2">
-                <span className={cn("flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold", active ? "bg-gold text-gold-foreground" : done ? "bg-success text-success-foreground" : "bg-muted text-muted-foreground")}>
-                  {done && !active ? <Check className="h-3 w-3" /> : s.n}
-                </span>
-                <span className="text-sm font-semibold">{s.title}</span>
-              </div>
-              <p className="mt-1 text-[11px] text-muted-foreground">{s.desc}</p>
+            <li key={s.n}>
+              <button
+                type="button"
+                disabled={disabled}
+                onClick={() => !disabled && setStep(s.n)}
+                className={cn(
+                  "w-full rounded-lg border border-gold bg-card p-3 text-left transition hover:shadow-[var(--shadow-gold)] disabled:cursor-not-allowed disabled:opacity-60",
+                  active && "shadow-[var(--shadow-gold)] ring-1 ring-gold",
+                  done && !active && "border-success/60",
+                )}
+              >
+                <div className="flex items-center gap-2">
+                  <span className={cn("flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold", active ? "bg-gold text-gold-foreground" : done ? "bg-success text-success-foreground" : "bg-muted text-muted-foreground")}>
+                    {done && !active ? <Check className="h-3 w-3" /> : s.n}
+                  </span>
+                  <span className="text-sm font-semibold">{s.title}</span>
+                </div>
+                <p className="mt-1 text-[11px] text-muted-foreground">{s.desc}</p>
+              </button>
             </li>
           );
         })}
