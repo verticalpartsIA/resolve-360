@@ -93,23 +93,24 @@ Estrutura sugerida (adicionar como arquivos NOVOS):
 .github/workflows/deploy-hostinger.yml
 hostinger/vite.config.node.ts        # config alternativa apontando para preset node-server
 hostinger/package.scripts.json       # scripts extras (build:node, start)
+hostinger/server.mjs                 # bootstrap Node HTTP para servir o handler gerado
 ```
 
 No workflow:
 1. `bun install`
 2. `cp hostinger/vite.config.node.ts vite.config.ts` (apenas dentro do runner — não commita de volta)
 3. `bun run build`
-4. Upload de `.output/` + `package.json` + `node_modules` (ou `bun install --production` no servidor) via FTP/SSH para a Hostinger.
+4. Upload de `dist/` + `server.mjs` + `package.json` + `package-lock.json` via FTP/SSH para a Hostinger, seguido de `npm install --omit=dev` no servidor quando SSH estiver disponível.
 
 ### 2.3 Variáveis de ambiente na Hostinger (painel hPanel → Environment Variables)
 
 ```
 VITE_SUPABASE_URL=https://jkbklzlbhhfnamaeislb.supabase.co
-VITE_SUPABASE_PUBLISHABLE_KEY=eyJhbGciOi...8b_EYjvPOcaUmE-ZsW903-sUCmCC5hSV1qhA2k8TUKI
+VITE_SUPABASE_PUBLISHABLE_KEY=<anon key do projeto oficial>
 VITE_SUPABASE_PROJECT_ID=jkbklzlbhhfnamaeislb
 SUPABASE_URL=https://jkbklzlbhhfnamaeislb.supabase.co
 SUPABASE_PUBLISHABLE_KEY=<mesmo valor de VITE_SUPABASE_PUBLISHABLE_KEY>
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOi...WoFDfpykUrwQcg0uzDwgfKSwWCy-7zrrJGWGOpo5drs
+SUPABASE_SERVICE_ROLE_KEY=<service role key do projeto oficial>
 NODE_ENV=production
 PORT=<a Hostinger preenche>
 ```
