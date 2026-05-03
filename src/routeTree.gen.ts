@@ -9,9 +9,12 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as RegisterRouteImport } from './routes/register'
+import { Route as RecoverPasswordRouteImport } from './routes/recover-password'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppRouteImport } from './routes/_app'
+import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppTicketsInternosRouteImport } from './routes/_app/tickets-internos'
 import { Route as AppOcorrenciasRouteImport } from './routes/_app/ocorrencias'
 import { Route as AppNovaOcorrenciaRouteImport } from './routes/_app/nova-ocorrencia'
@@ -20,9 +23,19 @@ import { Route as AppOcorrenciaRoRouteImport } from './routes/_app/ocorrencia.$r
 import { Route as AppNpsRespostasRouteImport } from './routes/_app/nps/respostas'
 import { Route as AppGestorKpisRouteImport } from './routes/_app/gestor/kpis'
 
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
   path: '/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RecoverPasswordRoute = RecoverPasswordRouteImport.update({
+  id: '/recover-password',
+  path: '/recover-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -32,6 +45,11 @@ const LoginRoute = LoginRouteImport.update({
 } as any)
 const AppRoute = AppRouteImport.update({
   id: '/_app',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppTicketsInternosRoute = AppTicketsInternosRouteImport.update({
@@ -71,9 +89,11 @@ const AppGestorKpisRoute = AppGestorKpisRouteImport.update({
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof AppRouteWithChildren
+  '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/recover-password': typeof RecoverPasswordRoute
   '/register': typeof RegisterRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/dashboard': typeof AppDashboardRoute
   '/nova-ocorrencia': typeof AppNovaOcorrenciaRoute
   '/ocorrencias': typeof AppOcorrenciasRoute
@@ -83,9 +103,11 @@ export interface FileRoutesByFullPath {
   '/ocorrencia/$ro': typeof AppOcorrenciaRoRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof AppRouteWithChildren
+  '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/recover-password': typeof RecoverPasswordRoute
   '/register': typeof RegisterRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/dashboard': typeof AppDashboardRoute
   '/nova-ocorrencia': typeof AppNovaOcorrenciaRoute
   '/ocorrencias': typeof AppOcorrenciasRoute
@@ -96,9 +118,12 @@ export interface FileRoutesByTo {
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
+  '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
+  '/recover-password': typeof RecoverPasswordRoute
   '/register': typeof RegisterRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/nova-ocorrencia': typeof AppNovaOcorrenciaRoute
   '/_app/ocorrencias': typeof AppOcorrenciasRoute
@@ -112,7 +137,9 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login'
+    | '/recover-password'
     | '/register'
+    | '/reset-password'
     | '/dashboard'
     | '/nova-ocorrencia'
     | '/ocorrencias'
@@ -124,7 +151,9 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/login'
+    | '/recover-password'
     | '/register'
+    | '/reset-password'
     | '/dashboard'
     | '/nova-ocorrencia'
     | '/ocorrencias'
@@ -134,9 +163,12 @@ export interface FileRouteTypes {
     | '/ocorrencia/$ro'
   id:
     | '__root__'
+    | '/'
     | '/_app'
     | '/login'
+    | '/recover-password'
     | '/register'
+    | '/reset-password'
     | '/_app/dashboard'
     | '/_app/nova-ocorrencia'
     | '/_app/ocorrencias'
@@ -147,18 +179,35 @@ export interface FileRouteTypes {
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
+  IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRouteWithChildren
   LoginRoute: typeof LoginRoute
+  RecoverPasswordRoute: typeof RecoverPasswordRoute
   RegisterRoute: typeof RegisterRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/register': {
       id: '/register'
       path: '/register'
       fullPath: '/register'
       preLoaderRoute: typeof RegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/recover-password': {
+      id: '/recover-password'
+      path: '/recover-password'
+      fullPath: '/recover-password'
+      preLoaderRoute: typeof RecoverPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -173,6 +222,13 @@ declare module '@tanstack/react-router' {
       path: ''
       fullPath: '/'
       preLoaderRoute: typeof AppRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app/tickets-internos': {
@@ -250,9 +306,12 @@ const AppRouteChildren: AppRouteChildren = {
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
+  IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
   LoginRoute: LoginRoute,
+  RecoverPasswordRoute: RecoverPasswordRoute,
   RegisterRoute: RegisterRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
