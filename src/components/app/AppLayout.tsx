@@ -74,7 +74,10 @@ export function AppLayout() {
       <aside className="fixed inset-y-0 left-0 z-40 hidden lg:flex">
         {/* Icon rail */}
         <div className="flex w-[68px] flex-col items-center gap-2 bg-[#0e0e10] py-5 ring-1 ring-white/5">
-          <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-md bg-gold text-black font-bold">V</div>
+          <div className="mb-2 flex flex-col items-center px-1 text-center">
+            <span className="text-[8px] font-semibold uppercase leading-tight tracking-[0.12em] text-white/70">Pós-Venda</span>
+            <span className="text-[10px] font-bold leading-tight text-gold">360°</span>
+          </div>
           <div className="my-2 h-px w-8 bg-white/10" />
           {railItems.map((n) => {
             const active = path === n.to || path.startsWith(n.to + "/");
@@ -93,7 +96,6 @@ export function AppLayout() {
           })}
           <div className="mt-auto flex flex-col items-center gap-3">
             <button className="text-white/40 hover:text-white"><MoreHorizontal className="h-5 w-5" /></button>
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gold text-black text-xs font-bold">{initials}</div>
           </div>
         </div>
 
