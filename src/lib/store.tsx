@@ -459,6 +459,8 @@ export function slaStatus(t: Ticket): { pct: number; label: string; tone: "ok" |
   const pct = Math.min(100, (elapsed / t.slaHours) * 100);
   if (t.status === "concluido") return { pct: 100, label: "SLA cumprido", tone: "ok" };
   if (pct >= 100) return { pct: 100, label: "SLA estourado", tone: "danger" };
-  if (pct >= 75) return { pct, label: `${Math.max(0, t.slaHours - elapsed).toFixed(1)}h restantes`, tone: "warn" };
-  return { pct, label: `${Math.max(0, t.slaHours - elapsed).toFixed(1)}h restantes`, tone: "ok" };
+  const restantes = Math.max(0, t.slaHours - elapsed).toFixed(1);
+  if (pct >= 80) return { pct, label: `⚠ 80% — ${restantes}h restantes`, tone: "danger" };
+  if (pct >= 50) return { pct, label: `${restantes}h restantes (50%)`, tone: "warn" };
+  return { pct, label: `${restantes}h restantes`, tone: "ok" };
 }
