@@ -416,6 +416,7 @@ function buildReport(
     pareto, porSetor, topProdutos, tendencia,
     nps: {
       ...npsAgg,
+      pctNeutros: npsAgg.total ? (npsAgg.neutros / npsAgg.total) * 100 : 0,
       distribuicao,
       porTier,
       feedbacksDetratores,
