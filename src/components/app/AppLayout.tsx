@@ -2,6 +2,7 @@ import { Link, Outlet, useRouterState, useNavigate } from "@tanstack/react-route
 import {
   LayoutDashboard, FileText, PlusCircle, Ticket, Smile, Package, Building2,
   BarChart3, MessageCircle, Settings, Bell, Search, LogOut, ChevronDown,
+  MoreHorizontal,
 } from "lucide-react";
 import { Logo } from "./Logo";
 import { cn } from "@/lib/utils";
@@ -65,58 +66,87 @@ export function AppLayout() {
     .filter((g) => g.items.length > 0);
 
   const initials = (user?.email ?? "?").slice(0, 2).toUpperCase();
+  const railItems = visible.flatMap((g) => g.items).slice(0, 8);
 
   return (
     <div className="min-h-screen bg-muted/30">
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col bg-sidebar text-sidebar-foreground lg:flex">
-        <div className="border-b border-sidebar-border px-5 py-5">
-          <Logo />
-        </div>
-        <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-5">
-          {visible.map((g) => (
-            <div key={g.title}>
-              <div className="px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-sidebar-foreground/40">
-                {g.title}
-              </div>
-              <div className="space-y-0.5">
-                {g.items.map((n) => {
-                  const active = path === n.to || path.startsWith(n.to + "/");
-                  const Icon = n.icon;
-                  return (
-                    <Link
-                      key={n.to}
-                      to={n.to}
-                      className={cn(
-                        "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                        active
-                          ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                          : "text-sidebar-foreground/70 hover:bg-sidebar-accent/40 hover:text-sidebar-foreground",
-                      )}
-                    >
-                      <Icon className="h-4 w-4" />
-                      {n.label}
-                      {active && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-gold" />}
-                    </Link>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-        </nav>
-        <div className="border-t border-sidebar-border p-4">
-          <div className="flex items-center gap-3">
+      {/* Dark sidebar — Behance-inspired (icon rail + expanded panel) */}
+      <aside className="fixed inset-y-0 left-0 z-40 hidden lg:flex">
+        {/* Icon rail */}
+        <div className="flex w-[68px] flex-col items-center gap-2 bg-[#0e0e10] py-5 ring-1 ring-white/5">
+          <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-md bg-gold text-black font-bold">V</div>
+          <div className="my-2 h-px w-8 bg-white/10" />
+          {railItems.map((n) => {
+            const active = path === n.to || path.startsWith(n.to + "/");
+            const Icon = n.icon;
+            return (
+              <Link key={n.to} to={n.to} title={n.label}
+                className={cn(
+                  "flex h-10 w-10 items-center justify-center rounded-lg transition-colors",
+                  active
+                    ? "bg-white/10 text-white ring-1 ring-white/15"
+                    : "text-white/50 hover:bg-white/5 hover:text-white"
+                )}>
+                <Icon className="h-[18px] w-[18px]" />
+              </Link>
+            );
+          })}
+          <div className="mt-auto flex flex-col items-center gap-3">
+            <button className="text-white/40 hover:text-white"><MoreHorizontal className="h-5 w-5" /></button>
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gold text-black text-xs font-bold">{initials}</div>
-            <div className="flex-1 min-w-0">
-              <div className="truncate text-xs font-medium text-sidebar-foreground">{user?.email}</div>
-              <div className="text-[10px] text-sidebar-foreground/60 uppercase tracking-wider">{roles.join(" · ") || "—"}</div>
+          </div>
+        </div>
+
+        {/* Expanded panel */}
+        <div className="flex w-60 flex-col bg-[#141416] text-white ring-1 ring-white/5">
+          <div className="flex items-center gap-2 px-5 py-5">
+            <Logo />
+          </div>
+          <nav className="flex-1 overflow-y-auto px-3 pb-4">
+            {visible.map((g) => (
+              <div key={g.title} className="mb-4">
+                <div className="px-3 pb-2 pt-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-white/35">
+                  {g.title}
+                </div>
+                <div className="space-y-1">
+                  {g.items.map((n) => {
+                    const active = path === n.to || path.startsWith(n.to + "/");
+                    const Icon = n.icon;
+                    return (
+                      <Link
+                        key={n.to}
+                        to={n.to}
+                        className={cn(
+                          "flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors",
+                          active
+                            ? "bg-white/[0.06] text-white ring-1 ring-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
+                            : "text-white/60 hover:bg-white/[0.04] hover:text-white",
+                        )}
+                      >
+                        <Icon className="h-[16px] w-[16px]" />
+                        <span className="truncate">{n.label}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </nav>
+          <div className="border-t border-white/5 p-3">
+            <div className="flex items-center gap-3 rounded-lg bg-white/[0.03] px-2.5 py-2">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gold text-black text-[11px] font-bold">{initials}</div>
+              <div className="flex-1 min-w-0">
+                <div className="truncate text-xs font-medium text-white">{user?.email}</div>
+                <div className="text-[10px] uppercase tracking-wider text-white/45">{roles.join(" · ") || "—"}</div>
+              </div>
+              <button
+                onClick={async () => { await signOut(); navigate({ to: "/login" }); }}
+                className="rounded-md p-1.5 text-white/50 hover:text-gold"
+                title="Sair"
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
             </div>
-            <button
-              onClick={async () => { await signOut(); navigate({ to: "/login" }); }}
-              className="rounded-md p-1.5 text-sidebar-foreground/60 hover:text-gold"
-              title="Sair"
-            >
-              <LogOut className="h-4 w-4" />
-            </button>
           </div>
         </div>
       </aside>
@@ -157,7 +187,7 @@ export function AppLayout() {
         </div>
       )}
 
-      <main className="lg:pl-64">
+      <main className="lg:pl-[308px]">
         <div className="sticky top-0 z-20 hidden items-center justify-between border-b bg-background/80 px-8 py-4 backdrop-blur lg:flex">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Search className="h-4 w-4" />
