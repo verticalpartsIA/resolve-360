@@ -297,8 +297,8 @@ function buildReport(
   const slaCompliance = inPeriod.length ? (slaOk / inPeriod.length) * 100 : 100;
   const slaOkPrev = inPrev.filter((t) => !t.slaViolado).length;
   const slaAnterior = inPrev.length ? (slaOkPrev / inPrev.length) * 100 : 100;
-  const custoTotal = inPeriod.reduce((s, t) => s + (t.custoNaoQualidade ?? 0) + (t.custoFrete ?? 0), 0);
-  const custoAnterior = inPrev.reduce((s, t) => s + (t.custoNaoQualidade ?? 0) + (t.custoFrete ?? 0), 0);
+  const custoTotal = inPeriod.reduce((s, t) => s + (t.custoNaoQualidade ?? 0) + (t.freightCostVp ?? 0), 0);
+  const custoAnterior = inPrev.reduce((s, t) => s + (t.custoNaoQualidade ?? 0) + (t.freightCostVp ?? 0), 0);
 
   // NPS aggregation
   const npsInPeriod = nps.filter((n) => new Date(n.dataPesquisa).getTime() >= cutoff);
@@ -448,7 +448,7 @@ function toFO504Row(t: ReturnType<typeof useStore>["tickets"][number]) {
     t.origin ?? "",
     t.responsibleSector ?? "",
     t.status === "concluido" ? "Autorizado" : t.status === "aberto" ? "Pendente" : t.status,
-    t.custoFrete ?? "",
+    t.freightCostVp ?? "",
     t.resolvedAt ? new Date(t.resolvedAt).toLocaleString("pt-BR") : "",
     t.observacoes ?? "",
     t.dataInicioAnalise ? new Date(t.dataInicioAnalise).toLocaleString("pt-BR") : "",
