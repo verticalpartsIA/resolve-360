@@ -2,16 +2,20 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { Logo } from "@/components/app/Logo";
 import { toast } from "sonner";
+import { useStore } from "@/lib/store";
+import { categorizeNps, NPS_CATEGORY_LABEL } from "@/lib/types";
 
 export const Route = createFileRoute("/nps/form/$token")({ component: PublicNpsForm });
 
 function PublicNpsForm() {
   const { token } = Route.useParams();
+  const { submitNpsSurvey } = useStore();
   const [q1, setQ1] = useState<number | null>(null);
   const [q2, setQ2] = useState<number | null>(null);
   const [q3, setQ3] = useState<number | null>(null);
   const [comment, setComment] = useState("");
   const [done, setDone] = useState(false);
+  const [submittedCategory, setSubmittedCategory] = useState<ReturnType<typeof categorizeNps> | null>(null);
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,7 +23,17 @@ function PublicNpsForm() {
       toast.error("Por favor, responda todas as perguntas.");
       return;
     }
-    // TODO: POST to public endpoint with token
+    const category = categorizeNps(q1);
+    submitNpsSurvey({
+      customer: `Cliente (token ${token.slice(0, 8)})`,
+      customerTier: "B",
+      q1Recomendacao: q1,
+      q2Resolucao: q2,
+      q3Agilidade: q3,
+      feedback: comment || undefined,
+      trigger: "pos_resolucao",
+    });
+    setSubmittedCategory(category);
     setDone(true);
   };
 
@@ -30,6 +44,11 @@ function PublicNpsForm() {
           <div className="mx-auto h-12 w-12 rounded-full bg-success/15 text-success grid place-items-center text-2xl">✓</div>
           <h1 className="mt-4 text-xl font-semibold">Obrigado pela sua resposta!</h1>
           <p className="mt-1 text-sm text-muted-foreground">Sua opinião ajuda a VerticalParts a melhorar continuamente.</p>
+          {submittedCategory && (
+            <div className="mt-4 inline-flex rounded-full border border-gold/40 bg-gold-soft/40 px-4 py-1.5 text-xs font-semibold">
+              Você foi classificado como: {NPS_CATEGORY_LABEL[submittedCategory]}
+            </div>
+          )}
         </div>
       </PublicShell>
     );
@@ -41,15 +60,21 @@ function PublicNpsForm() {
         <div>
           <p className="text-xs text-muted-foreground">Pesquisa #{token.slice(0, 8)}</p>
           <h1 className="mt-1 text-xl font-semibold sm:text-2xl">Sua opinião é importante</h1>
+          <p className="mt-1 text-sm text-muted-foreground">3 perguntas rápidas — escala 0 (nada provável) a 10 (extremamente provável).</p>
         </div>
-        <Scale label="Quão provável é você recomendar a VerticalParts?" value={q1} onChange={setQ1} />
-        <Scale label="Qual seu nível de satisfação com a resolução?" value={q2} onChange={setQ2} />
-        <Scale label="Como avalia a agilidade do atendimento?" value={q3} onChange={setQ3} />
+        <Scale label="1. Quão provável é você recomendar a VerticalParts a um colega?" value={q1} onChange={setQ1} />
+        <Scale label="2. Qual seu nível de satisfação com a resolução / agilidade?" value={q2} onChange={setQ2} />
+        <Scale label="3. Como avalia o atendimento recebido?" value={q3} onChange={setQ3} />
         <label className="block">
-          <span className="text-xs font-medium text-muted-foreground">Comentário (opcional)</span>
+          <span className="text-xs font-medium text-muted-foreground">Feedback (opcional — texto ou áudio em breve)</span>
           <textarea value={comment} onChange={(e) => setComment(e.target.value)} rows={3}
             className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary" />
         </label>
+        {q1 !== null && (
+          <div className="rounded-md border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+            Pré-classificação: <strong className="text-foreground">{NPS_CATEGORY_LABEL[categorizeNps(q1)]}</strong>
+          </div>
+        )}
         <button className="w-full rounded-md bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground hover:opacity-90">
           Enviar resposta
         </button>
