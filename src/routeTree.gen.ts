@@ -22,6 +22,7 @@ import { Route as AppOcorrenciasRouteImport } from './routes/_app/ocorrencias'
 import { Route as AppNovaOcorrenciaRouteImport } from './routes/_app/nova-ocorrencia'
 import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
 import { Route as AppClientesRouteImport } from './routes/_app/clientes'
+import { Route as NpsFormTokenRouteImport } from './routes/nps.form.$token'
 import { Route as AppThreadIdRouteImport } from './routes/_app/thread.$id'
 import { Route as AppProdutoCodigoRouteImport } from './routes/_app/produto.$codigo'
 import { Route as AppOcorrenciaRoRouteImport } from './routes/_app/ocorrencia.$ro'
@@ -105,6 +106,11 @@ const AppClientesRoute = AppClientesRouteImport.update({
   id: '/clientes',
   path: '/clientes',
   getParentRoute: () => AppRoute,
+} as any)
+const NpsFormTokenRoute = NpsFormTokenRouteImport.update({
+  id: '/nps/form/$token',
+  path: '/nps/form/$token',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AppThreadIdRoute = AppThreadIdRouteImport.update({
   id: '/thread/$id',
@@ -235,6 +241,7 @@ export interface FileRoutesByFullPath {
   '/ocorrencia/$ro': typeof AppOcorrenciaRoRouteWithChildren
   '/produto/$codigo': typeof AppProdutoCodigoRoute
   '/thread/$id': typeof AppThreadIdRoute
+  '/nps/form/$token': typeof NpsFormTokenRoute
   '/cliente/$cnpj/historico': typeof AppClienteCnpjHistoricoRoute
   '/ocorrencia/$ro/editar': typeof AppOcorrenciaRoEditarRoute
 }
@@ -268,6 +275,7 @@ export interface FileRoutesByTo {
   '/ocorrencia/$ro': typeof AppOcorrenciaRoRouteWithChildren
   '/produto/$codigo': typeof AppProdutoCodigoRoute
   '/thread/$id': typeof AppThreadIdRoute
+  '/nps/form/$token': typeof NpsFormTokenRoute
   '/cliente/$cnpj/historico': typeof AppClienteCnpjHistoricoRoute
   '/ocorrencia/$ro/editar': typeof AppOcorrenciaRoEditarRoute
 }
@@ -303,6 +311,7 @@ export interface FileRoutesById {
   '/_app/ocorrencia/$ro': typeof AppOcorrenciaRoRouteWithChildren
   '/_app/produto/$codigo': typeof AppProdutoCodigoRoute
   '/_app/thread/$id': typeof AppThreadIdRoute
+  '/nps/form/$token': typeof NpsFormTokenRoute
   '/_app/cliente/$cnpj/historico': typeof AppClienteCnpjHistoricoRoute
   '/_app/ocorrencia/$ro/editar': typeof AppOcorrenciaRoEditarRoute
 }
@@ -338,6 +347,7 @@ export interface FileRouteTypes {
     | '/ocorrencia/$ro'
     | '/produto/$codigo'
     | '/thread/$id'
+    | '/nps/form/$token'
     | '/cliente/$cnpj/historico'
     | '/ocorrencia/$ro/editar'
   fileRoutesByTo: FileRoutesByTo
@@ -371,6 +381,7 @@ export interface FileRouteTypes {
     | '/ocorrencia/$ro'
     | '/produto/$codigo'
     | '/thread/$id'
+    | '/nps/form/$token'
     | '/cliente/$cnpj/historico'
     | '/ocorrencia/$ro/editar'
   id:
@@ -405,6 +416,7 @@ export interface FileRouteTypes {
     | '/_app/ocorrencia/$ro'
     | '/_app/produto/$codigo'
     | '/_app/thread/$id'
+    | '/nps/form/$token'
     | '/_app/cliente/$cnpj/historico'
     | '/_app/ocorrencia/$ro/editar'
   fileRoutesById: FileRoutesById
@@ -416,6 +428,7 @@ export interface RootRouteChildren {
   RecoverPasswordRoute: typeof RecoverPasswordRoute
   RegisterRoute: typeof RegisterRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  NpsFormTokenRoute: typeof NpsFormTokenRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -510,6 +523,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/clientes'
       preLoaderRoute: typeof AppClientesRouteImport
       parentRoute: typeof AppRoute
+    }
+    '/nps/form/$token': {
+      id: '/nps/form/$token'
+      path: '/nps/form/$token'
+      fullPath: '/nps/form/$token'
+      preLoaderRoute: typeof NpsFormTokenRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_app/thread/$id': {
       id: '/_app/thread/$id'
@@ -734,6 +754,7 @@ const rootRouteChildren: RootRouteChildren = {
   RecoverPasswordRoute: RecoverPasswordRoute,
   RegisterRoute: RegisterRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  NpsFormTokenRoute: NpsFormTokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
