@@ -51,7 +51,7 @@ function MyTickets() {
                       {t.roNumber}
                     </Link>
                   </td>
-                  <td className="px-4 py-3">{t.customerName}</td>
+                  <td className="px-4 py-3">{t.customer}</td>
                   <td className="px-4 py-3">{STATUS_LABEL[t.status]}</td>
                   <td className="px-4 py-3 text-muted-foreground">
                     {new Date(t.updatedAt).toLocaleDateString("pt-BR")}
