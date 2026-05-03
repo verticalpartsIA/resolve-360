@@ -3,10 +3,10 @@ import { STATUS_LABEL, PRIORITY_LABEL, type TicketStatus, type TicketPriority } 
 
 export function StatusBadge({ status }: { status: TicketStatus }) {
   const styles: Record<TicketStatus, string> = {
-    aberto: "bg-secondary text-foreground border-border",
-    analise: "bg-gold-soft text-gold-foreground border-gold/30",
-    laudo: "bg-primary/5 text-primary border-primary/20",
-    concluido: "bg-success/10 text-success border-success/20",
+    aberto: "bg-destructive/10 text-destructive border-destructive/30",
+    analise: "bg-warning/15 text-warning-foreground border-warning/40",
+    laudo: "bg-warning/15 text-warning-foreground border-warning/40",
+    concluido: "bg-success/10 text-success border-success/30",
   };
   return (
     <span className={cn("inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium", styles[status])}>

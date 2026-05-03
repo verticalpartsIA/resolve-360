@@ -49,9 +49,9 @@ export function AppLayout() {
       </aside>
 
       {/* Mobile top bar */}
-      <header className="sticky top-0 z-30 flex items-center justify-between border-b bg-background px-4 py-3 lg:hidden">
+      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-sidebar-border bg-black px-4 py-3 lg:hidden">
         <Logo />
-        <button className="rounded-md border p-2"><Bell className="h-4 w-4" /></button>
+        <button className="rounded-md border border-sidebar-border p-2 text-white hover:text-gold hover:border-gold"><Bell className="h-4 w-4" /></button>
       </header>
 
       {/* Mobile bottom nav */}
@@ -64,7 +64,7 @@ export function AppLayout() {
               key={n.to}
               to={n.to}
               className={cn(
-                "flex flex-col items-center gap-1 py-2.5 text-[10px] font-medium",
+                "flex flex-col items-center gap-1 py-2.5 text-[10px] font-medium transition-colors hover:text-gold",
                 active ? "text-gold" : "text-muted-foreground",
               )}
             >
