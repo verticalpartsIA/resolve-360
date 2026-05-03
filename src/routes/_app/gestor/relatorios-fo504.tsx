@@ -301,11 +301,11 @@ function buildReport(
   const custoAnterior = inPrev.reduce((s, t) => s + (t.custoNaoQualidade ?? 0) + (t.freightCostVp ?? 0), 0);
 
   // NPS aggregation
-  const npsInPeriod = nps.filter((n) => new Date(n.dataPesquisa).getTime() >= cutoff);
+  const npsInPeriod = nps.filter((n) => new Date(n.surveyDate).getTime() >= cutoff);
   const npsAgg = aggregateNps(npsInPeriod);
   const npsPrev = days
     ? nps.filter((n) => {
-        const ts = new Date(n.dataPesquisa).getTime();
+        const ts = new Date(n.surveyDate).getTime();
         return ts >= prevCutoff && ts < cutoff;
       })
     : [];
@@ -330,7 +330,7 @@ function buildReport(
       customer: n.customer,
       score: n.q1Recomendacao,
       feedback: n.feedback ?? "",
-      date: new Date(n.dataPesquisa).toLocaleDateString("pt-BR"),
+      date: new Date(n.surveyDate).toLocaleDateString("pt-BR"),
     }));
 
   // Pareto motivos
@@ -406,8 +406,8 @@ function buildReport(
     resumo: {
       totalOcorrencias: inPeriod.length,
       totalAnterior: inPrev.length,
-      npsScore: npsAgg.score,
-      npsAnterior: npsAggPrev.score,
+      npsScore: npsAgg.npsScore,
+      npsAnterior: npsAggPrev.npsScore,
       slaCompliance, slaAnterior,
       custoTotal, custoAnterior,
       concluidos, emAndamento, emRisco,
