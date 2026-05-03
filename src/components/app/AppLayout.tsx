@@ -2,7 +2,6 @@ import { Link, Outlet, useRouterState, useNavigate } from "@tanstack/react-route
 import {
   LayoutDashboard, FileText, PlusCircle, Ticket, Smile, Package, Building2,
   BarChart3, MessageCircle, Settings, Bell, Search, LogOut, ChevronDown,
-  MoreHorizontal,
 } from "lucide-react";
 import { Logo } from "./Logo";
 import { cn } from "@/lib/utils";
@@ -66,7 +65,6 @@ export function AppLayout() {
     .filter((g) => g.items.length > 0);
 
   const initials = (user?.email ?? "?").slice(0, 2).toUpperCase();
-  const railItems = visible.flatMap((g) => g.items).slice(0, 8);
 
   return (
     <div className="min-h-screen bg-muted/30">
