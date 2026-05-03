@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useStore } from "@/lib/store";
-import { aggregateNps } from "@/lib/types";
+import { aggregateNps, categorizeNps, type NpsRecord } from "@/lib/types";
 import { BackToDashboard } from "@/components/app/BackToDashboard";
 import { Smile, Meh, Frown, TrendingUp } from "lucide-react";
 
@@ -8,14 +8,24 @@ export const Route = createFileRoute("/_app/nps/dashboard")({ component: NpsDash
 
 function NpsDashboard() {
   const { npsRecords, tickets } = useStore();
-  // fallback: tickets concluídos com nota
-  const fromTickets = tickets
+  // fallback: tickets concluídos com nota → constrói registros sintéticos só pra agregação
+  const fallback: NpsRecord[] = tickets
     .filter((t) => t.nps !== undefined)
-    .map((t) => ({ q1Recomendacao: t.nps as number }));
-  const all = npsRecords.length
-    ? npsRecords
-    : (fromTickets as Parameters<typeof aggregateNps>[0]);
-  const agg = aggregateNps(all as never);
+    .map((t) => ({
+      id: t.id,
+      customer: t.customer,
+      customerTier: "B",
+      occurrenceId: t.id,
+      q1Recomendacao: t.nps as number,
+      q2Resolucao: t.nps as number,
+      q3Agilidade: t.nps as number,
+      category: categorizeNps(t.nps as number),
+      surveyDate: t.npsSentAt ?? t.updatedAt,
+      trigger: "pos_resolucao",
+      createdAt: t.createdAt,
+    }));
+  const all = npsRecords.length ? npsRecords : fallback;
+  const agg = aggregateNps(all);
   const total = agg.total || 1;
 
   return (
