@@ -9,12 +9,18 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as InternosRouteImport } from './routes/internos'
 import { Route as GestorRouteImport } from './routes/gestor'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as TicketsIndexRouteImport } from './routes/tickets.index'
 import { Route as TicketsNovoRouteImport } from './routes/tickets.novo'
 import { Route as TicketsIdRouteImport } from './routes/tickets.$id'
 
+const InternosRoute = InternosRouteImport.update({
+  id: '/internos',
+  path: '/internos',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const GestorRoute = GestorRouteImport.update({
   id: '/gestor',
   path: '/gestor',
@@ -44,6 +50,7 @@ const TicketsIdRoute = TicketsIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/gestor': typeof GestorRoute
+  '/internos': typeof InternosRoute
   '/tickets/$id': typeof TicketsIdRoute
   '/tickets/novo': typeof TicketsNovoRoute
   '/tickets/': typeof TicketsIndexRoute
@@ -51,6 +58,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/gestor': typeof GestorRoute
+  '/internos': typeof InternosRoute
   '/tickets/$id': typeof TicketsIdRoute
   '/tickets/novo': typeof TicketsNovoRoute
   '/tickets': typeof TicketsIndexRoute
@@ -59,19 +67,33 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/gestor': typeof GestorRoute
+  '/internos': typeof InternosRoute
   '/tickets/$id': typeof TicketsIdRoute
   '/tickets/novo': typeof TicketsNovoRoute
   '/tickets/': typeof TicketsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/gestor' | '/tickets/$id' | '/tickets/novo' | '/tickets/'
+  fullPaths:
+    | '/'
+    | '/gestor'
+    | '/internos'
+    | '/tickets/$id'
+    | '/tickets/novo'
+    | '/tickets/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/gestor' | '/tickets/$id' | '/tickets/novo' | '/tickets'
+  to:
+    | '/'
+    | '/gestor'
+    | '/internos'
+    | '/tickets/$id'
+    | '/tickets/novo'
+    | '/tickets'
   id:
     | '__root__'
     | '/'
     | '/gestor'
+    | '/internos'
     | '/tickets/$id'
     | '/tickets/novo'
     | '/tickets/'
@@ -80,6 +102,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   GestorRoute: typeof GestorRoute
+  InternosRoute: typeof InternosRoute
   TicketsIdRoute: typeof TicketsIdRoute
   TicketsNovoRoute: typeof TicketsNovoRoute
   TicketsIndexRoute: typeof TicketsIndexRoute
@@ -87,6 +110,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/internos': {
+      id: '/internos'
+      path: '/internos'
+      fullPath: '/internos'
+      preLoaderRoute: typeof InternosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/gestor': {
       id: '/gestor'
       path: '/gestor'
@@ -128,6 +158,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   GestorRoute: GestorRoute,
+  InternosRoute: InternosRoute,
   TicketsIdRoute: TicketsIdRoute,
   TicketsNovoRoute: TicketsNovoRoute,
   TicketsIndexRoute: TicketsIndexRoute,
@@ -135,3 +166,12 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}
