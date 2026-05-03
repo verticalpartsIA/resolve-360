@@ -9,38 +9,91 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as GestorRouteImport } from './routes/gestor'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as TicketsIndexRouteImport } from './routes/tickets.index'
+import { Route as TicketsNovoRouteImport } from './routes/tickets.novo'
+import { Route as TicketsIdRouteImport } from './routes/tickets.$id'
 
+const GestorRoute = GestorRouteImport.update({
+  id: '/gestor',
+  path: '/gestor',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TicketsIndexRoute = TicketsIndexRouteImport.update({
+  id: '/tickets/',
+  path: '/tickets/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TicketsNovoRoute = TicketsNovoRouteImport.update({
+  id: '/tickets/novo',
+  path: '/tickets/novo',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TicketsIdRoute = TicketsIdRouteImport.update({
+  id: '/tickets/$id',
+  path: '/tickets/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/gestor': typeof GestorRoute
+  '/tickets/$id': typeof TicketsIdRoute
+  '/tickets/novo': typeof TicketsNovoRoute
+  '/tickets/': typeof TicketsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/gestor': typeof GestorRoute
+  '/tickets/$id': typeof TicketsIdRoute
+  '/tickets/novo': typeof TicketsNovoRoute
+  '/tickets': typeof TicketsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/gestor': typeof GestorRoute
+  '/tickets/$id': typeof TicketsIdRoute
+  '/tickets/novo': typeof TicketsNovoRoute
+  '/tickets/': typeof TicketsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/' | '/gestor' | '/tickets/$id' | '/tickets/novo' | '/tickets/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/gestor' | '/tickets/$id' | '/tickets/novo' | '/tickets'
+  id:
+    | '__root__'
+    | '/'
+    | '/gestor'
+    | '/tickets/$id'
+    | '/tickets/novo'
+    | '/tickets/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  GestorRoute: typeof GestorRoute
+  TicketsIdRoute: typeof TicketsIdRoute
+  TicketsNovoRoute: typeof TicketsNovoRoute
+  TicketsIndexRoute: typeof TicketsIndexRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/gestor': {
+      id: '/gestor'
+      path: '/gestor'
+      fullPath: '/gestor'
+      preLoaderRoute: typeof GestorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,11 +101,36 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/tickets/': {
+      id: '/tickets/'
+      path: '/tickets'
+      fullPath: '/tickets/'
+      preLoaderRoute: typeof TicketsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tickets/novo': {
+      id: '/tickets/novo'
+      path: '/tickets/novo'
+      fullPath: '/tickets/novo'
+      preLoaderRoute: typeof TicketsNovoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tickets/$id': {
+      id: '/tickets/$id'
+      path: '/tickets/$id'
+      fullPath: '/tickets/$id'
+      preLoaderRoute: typeof TicketsIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  GestorRoute: GestorRoute,
+  TicketsIdRoute: TicketsIdRoute,
+  TicketsNovoRoute: TicketsNovoRoute,
+  TicketsIndexRoute: TicketsIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
