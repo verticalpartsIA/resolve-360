@@ -1,24 +1,48 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useStore } from "@/lib/store";
 import {
   OCCURRENCE_REASON_LABEL,
   RESPONSIBLE_SECTOR_LABEL,
+  CONTAINMENT_ACTION_LABEL,
+  INTERNAL_DEPT_LABEL,
+  INTERNAL_DEFAULT_SLA,
   type TicketChannel,
   type TicketPriority,
   type OccurrenceReason,
   type ResponsibleSector,
   type OccurrenceOrigin,
+  type ContainmentAction,
+  type InternalDepartment,
+  type InternalPriority,
 } from "@/lib/types";
-import { MessageCircle, FileEdit } from "lucide-react";
+import { MessageCircle, FileEdit, Check, Bell, Mail, Phone, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/tickets/novo")({ component: NewTicket });
 
+const STEPS = [
+  { n: 1, title: "Triagem", desc: "Cliente e canal" },
+  { n: 2, title: "Ocorrência", desc: "Produto e narrativa" },
+  { n: 3, title: "Ações", desc: "Contenção e ticket interno" },
+  { n: 4, title: "Confirmação", desc: "Notificações e SLA" },
+] as const;
+
+// "ERP mock" — clientes recentes para autocomplete
+const CLIENT_DB = [
+  { customer: "AutoCenter Silva Ltda", customerDoc: "12.345.678/0001-90", customerContato: "Roberto Silva", customerTelefone: "(11) 98877-1122", city: "São Paulo", state: "SP", recentParts: [{ part: "Pastilha de Freio Dianteira", partCode: "PF-3421" }, { part: "Disco de Freio", partCode: "DF-9911" }] },
+  { customer: "Mecânica Veloz", customerDoc: "98.765.432/0001-12", customerContato: "Joana Pires", customerTelefone: "(11) 91234-5678", city: "Campinas", state: "SP", recentParts: [{ part: "Filtro de Óleo", partCode: "FO-1102" }] },
+  { customer: "Distribuidora Norte Peças", customerDoc: "33.444.555/0001-77", customerContato: "Marcos Lima", customerTelefone: "(91) 99000-1111", city: "Belém", state: "PA", recentParts: [{ part: "Amortecedor Traseiro", partCode: "AM-9921" }] },
+  { customer: "Auto Peças Brasil", customerDoc: "55.666.777/0001-22", customerContato: "Paula Reis", customerTelefone: "(21) 98888-3333", city: "Rio de Janeiro", state: "RJ", recentParts: [{ part: "Correia Dentada", partCode: "CD-5510" }] },
+];
+
 function NewTicket() {
-  const { createTicket } = useStore();
+  const { createTicket, createInternalTicket, tickets } = useStore();
   const navigate = useNavigate();
+  const [step, setStep] = useState(1);
   const [channel, setChannel] = useState<TicketChannel>("manual");
+  const [clientQuery, setClientQuery] = useState("");
+  const [showSuggest, setShowSuggest] = useState(false);
   const [form, setForm] = useState({
     customer: "",
     customerDoc: "",
@@ -41,122 +65,389 @@ function NewTicket() {
     responsibleSector: "nao_aplica" as ResponsibleSector,
     origin: "externo" as OccurrenceOrigin,
     emitente: "",
+    whatsappThreadId: "",
+  });
+  const [contencao, setContencao] = useState<ContainmentAction[]>([]);
+  const [openInternal, setOpenInternal] = useState(false);
+  const [internal, setInternal] = useState({
+    targetDepartment: "comercial" as InternalDepartment,
+    priority: "media" as InternalPriority,
+    subject: "",
+    description: "",
+    slaHours: INTERNAL_DEFAULT_SLA.comercial,
   });
   const [err, setErr] = useState<string | null>(null);
+  const [created, setCreated] = useState<{ ticketId: string; roNumber: string; internalCode?: string } | null>(null);
 
-  function submit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!form.customer || !form.part || !form.partCode || !form.reason) {
-      setErr("Preencha cliente, peça, código da peça e motivo.");
+  // Autocomplete por nome / CNPJ / telefone
+  const matches = useMemo(() => {
+    const q = clientQuery.trim().toLowerCase();
+    if (!q || q.length < 2) return [];
+    return CLIENT_DB.filter(
+      (c) =>
+        c.customer.toLowerCase().includes(q) ||
+        c.customerDoc.toLowerCase().includes(q) ||
+        c.customerTelefone.toLowerCase().includes(q),
+    ).slice(0, 5);
+  }, [clientQuery]);
+
+  // Histórico do cliente selecionado
+  const clientHistory = useMemo(
+    () => (form.customer ? tickets.filter((t) => t.customer === form.customer) : []),
+    [form.customer, tickets],
+  );
+  const selectedClient = useMemo(
+    () => CLIENT_DB.find((c) => c.customer === form.customer),
+    [form.customer],
+  );
+
+  function pickClient(c: (typeof CLIENT_DB)[number]) {
+    setForm((f) => ({
+      ...f,
+      customer: c.customer,
+      customerDoc: c.customerDoc,
+      customerContato: c.customerContato,
+      customerTelefone: c.customerTelefone,
+      city: c.city,
+      state: c.state,
+    }));
+    setClientQuery(c.customer);
+    setShowSuggest(false);
+  }
+
+  function toggleContencao(a: ContainmentAction) {
+    setContencao((prev) => (prev.includes(a) ? prev.filter((x) => x !== a) : [...prev, a]));
+  }
+
+  function next() {
+    setErr(null);
+    if (step === 1 && !form.customer) {
+      setErr("Selecione ou cadastre um cliente.");
       return;
     }
-    const t = createTicket({ ...form, channel });
-    navigate({ to: "/tickets/$id", params: { id: t.id } });
+    if (step === 2 && (!form.part || !form.partCode || !form.reason)) {
+      setErr("Preencha peça, código e narrativa.");
+      return;
+    }
+    setStep((s) => Math.min(4, s + 1));
+  }
+
+  function finalize() {
+    setErr(null);
+    const t = createTicket({ ...form, channel, acaoContencao: contencao });
+    let internalCode: string | undefined;
+    if (openInternal && internal.subject) {
+      const it = createInternalTicket({
+        ...internal,
+        linkedOccurrenceId: t.id,
+        linkedCustomer: t.customer,
+      });
+      internalCode = it.code;
+    }
+    setCreated({ ticketId: t.id, roNumber: t.roNumber ?? t.code, internalCode });
+    setStep(4);
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="mx-auto max-w-4xl space-y-6">
       <div>
         <p className="text-xs font-medium uppercase tracking-[0.18em] text-gold">Novo</p>
-        <h1 className="mt-1 text-2xl font-semibold sm:text-3xl">Abertura de ticket</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Registre uma devolução ou ocorrência de pós-venda.</p>
+        <h1 className="mt-1 text-2xl font-semibold sm:text-3xl">Nova ocorrência</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Fluxo guiado em {STEPS.length} passos — entender para atender.
+        </p>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2">
-        <ChannelCard active={channel === "whatsapp"} onClick={() => setChannel("whatsapp")} icon={MessageCircle} title="WhatsApp" desc="Ticket vinculado ao WhatsApp Business" />
-        <ChannelCard active={channel === "manual"} onClick={() => setChannel("manual")} icon={FileEdit} title="Manual" desc="Cadastro direto pelo operador" />
+      {/* Stepper */}
+      <ol className="grid grid-cols-4 gap-2">
+        {STEPS.map((s) => {
+          const done = created ? true : step > s.n;
+          const active = step === s.n;
+          return (
+            <li key={s.n} className={cn("rounded-lg border bg-card p-3 transition", active && "border-gold shadow-[var(--shadow-gold)]", done && !active && "border-success/40")}>
+              <div className="flex items-center gap-2">
+                <span className={cn("flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold", active ? "bg-gold text-gold-foreground" : done ? "bg-success text-success-foreground" : "bg-muted text-muted-foreground")}>
+                  {done && !active ? <Check className="h-3 w-3" /> : s.n}
+                </span>
+                <span className="text-sm font-semibold">{s.title}</span>
+              </div>
+              <p className="mt-1 text-[11px] text-muted-foreground">{s.desc}</p>
+            </li>
+          );
+        })}
+      </ol>
+
+      <div className="rounded-xl border bg-card p-6 shadow-[var(--shadow-elegant)]">
+        {/* ===== PASSO 1 ===== */}
+        {step === 1 && !created && (
+          <div className="space-y-5">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <ChannelCard active={channel === "whatsapp"} onClick={() => setChannel("whatsapp")} icon={MessageCircle} title="WhatsApp" desc="Vincular conversa do WhatsApp Business" />
+              <ChannelCard active={channel === "manual"} onClick={() => setChannel("manual")} icon={FileEdit} title="Manual" desc="Telefone, e-mail ou portal" />
+            </div>
+
+            <Field label="Buscar cliente (nome, CNPJ ou telefone) *">
+              <div className="relative">
+                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"><Search className="h-4 w-4" /></span>
+                <input
+                  value={clientQuery}
+                  onChange={(e) => { setClientQuery(e.target.value); setShowSuggest(true); }}
+                  onFocus={() => setShowSuggest(true)}
+                  className={cn(inputCls, "pl-9")}
+                  placeholder="Ex: AutoCenter, 12.345..., (11) 98877..."
+                />
+                {showSuggest && matches.length > 0 && (
+                  <ul className="absolute z-10 mt-1 w-full overflow-hidden rounded-md border bg-popover shadow-lg">
+                    {matches.map((c) => (
+                      <li key={c.customerDoc}>
+                        <button type="button" onClick={() => pickClient(c)} className="flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left text-sm hover:bg-muted">
+                          <span className="font-medium">{c.customer}</span>
+                          <span className="text-xs text-muted-foreground">{c.customerDoc} · {c.customerTelefone}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </Field>
+
+            {form.customer && (
+              <div className="rounded-lg border border-gold/30 bg-gold-soft/30 p-4">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <div className="font-semibold">{form.customer}</div>
+                    <div className="text-xs text-muted-foreground">{form.customerDoc} · {form.city}/{form.state}</div>
+                    <div className="mt-1 text-xs text-muted-foreground">Contato: {form.customerContato} · {form.customerTelefone}</div>
+                  </div>
+                  <div className="text-right text-xs">
+                    <div className="font-semibold text-foreground">{clientHistory.length}</div>
+                    <div className="text-muted-foreground">ocorrências no histórico</div>
+                  </div>
+                </div>
+                {selectedClient && selectedClient.recentParts.length > 0 && (
+                  <div className="mt-3">
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Produtos recentes (ERP)</p>
+                    <div className="mt-1 flex flex-wrap gap-2">
+                      {selectedClient.recentParts.map((p) => (
+                        <button key={p.partCode} type="button" onClick={() => setForm({ ...form, part: p.part, partCode: p.partCode })}
+                          className="rounded-full border bg-background px-3 py-1 text-xs hover:border-gold">
+                          {p.part} <span className="text-muted-foreground">· {p.partCode}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {channel === "whatsapp" && (
+              <Field label="Vincular conversa WhatsApp (telefone ou ID)">
+                <input value={form.whatsappThreadId} onChange={(e) => setForm({ ...form, whatsappThreadId: e.target.value })} className={inputCls} placeholder="Ex: 5511988770000 ou wa-thread-abc123" />
+              </Field>
+            )}
+          </div>
+        )}
+
+        {/* ===== PASSO 2 ===== */}
+        {step === 2 && !created && (
+          <div className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Peça *">
+                <input value={form.part} onChange={(e) => setForm({ ...form, part: e.target.value })} className={inputCls} placeholder="Descrição" />
+              </Field>
+              <Field label="Código (ERP) *">
+                <input value={form.partCode} onChange={(e) => setForm({ ...form, partCode: e.target.value })} className={inputCls} placeholder="Ex: PF-3421" />
+              </Field>
+              <Field label="Motivo da ocorrência *">
+                <select value={form.occurrenceReason} onChange={(e) => setForm({ ...form, occurrenceReason: e.target.value as OccurrenceReason })} className={inputCls}>
+                  {(Object.keys(OCCURRENCE_REASON_LABEL) as OccurrenceReason[]).map((k) => (
+                    <option key={k} value={k}>{OCCURRENCE_REASON_LABEL[k]}</option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Setor responsável">
+                <select value={form.responsibleSector} onChange={(e) => setForm({ ...form, responsibleSector: e.target.value as ResponsibleSector })} className={inputCls}>
+                  {(Object.keys(RESPONSIBLE_SECTOR_LABEL) as ResponsibleSector[]).map((k) => (
+                    <option key={k} value={k}>{RESPONSIBLE_SECTOR_LABEL[k]}</option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="NF (número)">
+                <input value={form.nfNumero} onChange={(e) => setForm({ ...form, nfNumero: e.target.value })} className={inputCls} placeholder="Ex: 123456" />
+              </Field>
+              <Field label="NF (R$)">
+                <input type="number" min={0} step="0.01" value={form.nfValor} onChange={(e) => setForm({ ...form, nfValor: Number(e.target.value) })} className={inputCls} />
+              </Field>
+              <Field label="Quantidade">
+                <input type="number" min={1} value={form.quantity} onChange={(e) => setForm({ ...form, quantity: Number(e.target.value) })} className={inputCls} />
+              </Field>
+              <Field label="Vendedor">
+                <input value={form.vendedor} onChange={(e) => setForm({ ...form, vendedor: e.target.value })} className={inputCls} placeholder="Responsável pela venda" />
+              </Field>
+            </div>
+
+            <Field label="Narrativa da ocorrência *">
+              <textarea value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} rows={5} className={cn(inputCls, "resize-none")} placeholder="Descreva o que aconteceu, sem apontar culpados — foco em entender e resolver." />
+              <p className="mt-1 text-[11px] text-muted-foreground">💡 Dica: descreva o ocorrido sem apontar culpados. O objetivo é entender para atender.</p>
+            </Field>
+
+            <Field label="Fotos (upload)">
+              <input type="file" multiple accept="image/*" className={cn(inputCls, "py-1.5")} />
+              <p className="mt-1 text-[11px] text-muted-foreground">Imagens são comprimidas automaticamente antes do envio.</p>
+            </Field>
+          </div>
+        )}
+
+        {/* ===== PASSO 3 ===== */}
+        {step === 3 && !created && (
+          <div className="space-y-5">
+            <div>
+              <h3 className="text-sm font-semibold">Ações de contenção</h3>
+              <p className="text-xs text-muted-foreground">Selecione uma ou mais ações imediatas.</p>
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                {(Object.keys(CONTAINMENT_ACTION_LABEL) as ContainmentAction[]).map((a) => {
+                  const checked = contencao.includes(a);
+                  return (
+                    <label key={a} className={cn("flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm transition", checked ? "border-gold bg-gold-soft/40" : "hover:border-gold/40")}>
+                      <input type="checkbox" checked={checked} onChange={() => toggleContencao(a)} className="h-4 w-4 accent-[hsl(var(--gold))]" />
+                      {CONTAINMENT_ACTION_LABEL[a]}
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Prioridade">
+                <select value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value as TicketPriority })} className={inputCls}>
+                  <option value="baixa">Baixa</option>
+                  <option value="media">Média</option>
+                  <option value="alta">Alta</option>
+                  <option value="critica">Crítica</option>
+                </select>
+              </Field>
+              <Field label="SLA (horas)">
+                <input type="number" min={1} value={form.slaHours} onChange={(e) => setForm({ ...form, slaHours: Number(e.target.value) })} className={inputCls} />
+              </Field>
+            </div>
+
+            <div className="rounded-lg border p-4">
+              <label className="flex cursor-pointer items-center gap-2 text-sm font-semibold">
+                <input type="checkbox" checked={openInternal} onChange={(e) => setOpenInternal(e.target.checked)} className="h-4 w-4 accent-[hsl(var(--gold))]" />
+                Abrir ticket interno em paralelo
+              </label>
+              {openInternal && (
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <Field label="Departamento">
+                    <select value={internal.targetDepartment} onChange={(e) => {
+                      const dept = e.target.value as InternalDepartment;
+                      setInternal({ ...internal, targetDepartment: dept, slaHours: INTERNAL_DEFAULT_SLA[dept] });
+                    }} className={inputCls}>
+                      {(Object.keys(INTERNAL_DEPT_LABEL) as InternalDepartment[]).map((k) => (
+                        <option key={k} value={k}>{INTERNAL_DEPT_LABEL[k]}</option>
+                      ))}
+                    </select>
+                  </Field>
+                  <Field label="Prioridade">
+                    <select value={internal.priority} onChange={(e) => setInternal({ ...internal, priority: e.target.value as InternalPriority })} className={inputCls}>
+                      <option value="baixa">Baixa</option>
+                      <option value="media">Média</option>
+                      <option value="alta">Alta</option>
+                      <option value="critica">Crítica</option>
+                    </select>
+                  </Field>
+                  <Field label="SLA (horas)">
+                    <input type="number" min={1} value={internal.slaHours} onChange={(e) => setInternal({ ...internal, slaHours: Number(e.target.value) })} className={inputCls} />
+                  </Field>
+                  <Field label="Assunto">
+                    <input value={internal.subject} onChange={(e) => setInternal({ ...internal, subject: e.target.value })} className={inputCls} placeholder="Resumo da solicitação" />
+                  </Field>
+                  <div className="sm:col-span-2">
+                    <Field label="Descrição da solicitação">
+                      <textarea value={internal.description} onChange={(e) => setInternal({ ...internal, description: e.target.value })} rows={3} className={cn(inputCls, "resize-none")} placeholder="O que você precisa do departamento?" />
+                    </Field>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ===== PASSO 4 — confirmação / pós-criação ===== */}
+        {step === 4 && (
+          <div className="space-y-5">
+            {created ? (
+              <>
+                <div className="rounded-lg border border-success/40 bg-success/10 p-4">
+                  <div className="flex items-start gap-3">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-full bg-success text-success-foreground"><Check className="h-5 w-5" /></span>
+                    <div>
+                      <h3 className="font-semibold">Ocorrência {created.roNumber} registrada</h3>
+                      <p className="text-xs text-muted-foreground">Prazo de resposta: {form.slaHours}h úteis a partir de agora.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <h4 className="text-sm font-semibold">Notificações disparadas</h4>
+                  <NotifyRow icon={MessageCircle} label="WhatsApp ao cliente" detail={`"Sua ocorrência ${created.roNumber} foi registrada. Prazo: ${form.slaHours}h úteis."`} ok={!!form.customerTelefone} />
+                  <NotifyRow icon={Mail} label="E-mail de confirmação" detail={`Para ${form.customerContato || "contato do cliente"}`} ok />
+                  {created.internalCode && (
+                    <NotifyRow icon={Bell} label={`Departamento ${INTERNAL_DEPT_LABEL[internal.targetDepartment]} notificado`} detail={`Ticket interno ${created.internalCode}`} ok />
+                  )}
+                  <NotifyRow icon={Phone} label="Dashboard atualizado em tempo real" detail="Operador e Gestor" ok />
+                </div>
+
+                <div className="rounded-lg border bg-muted/30 p-4 text-xs">
+                  <p className="font-semibold text-foreground">Monitoramento de SLA</p>
+                  <ul className="mt-2 space-y-1 text-muted-foreground">
+                    <li>• Alerta in-app aos <strong>50%</strong> do prazo</li>
+                    <li>• Alerta + e-mail ao gestor aos <strong>80%</strong> do prazo</li>
+                    <li>• Violação registrada em log e gerência notificada</li>
+                  </ul>
+                </div>
+
+                <div className="flex flex-wrap justify-end gap-2">
+                  <button onClick={() => navigate({ to: "/tickets" })} className="rounded-md border px-4 py-2 text-sm font-medium hover:bg-muted">Ver fila</button>
+                  <button onClick={() => navigate({ to: "/tickets/$id", params: { id: created.ticketId } })} className="rounded-md bg-primary px-5 py-2 text-sm font-medium text-primary-foreground hover:opacity-90">Abrir {created.roNumber}</button>
+                </div>
+              </>
+            ) : (
+              <>
+                <h3 className="text-sm font-semibold">Revise antes de registrar</h3>
+                <dl className="grid gap-3 text-sm sm:grid-cols-2">
+                  <ReviewRow label="Canal" value={channel === "whatsapp" ? "WhatsApp" : "Manual"} />
+                  <ReviewRow label="Cliente" value={`${form.customer} · ${form.customerDoc}`} />
+                  <ReviewRow label="Produto" value={`${form.part} (${form.partCode})`} />
+                  <ReviewRow label="Motivo" value={OCCURRENCE_REASON_LABEL[form.occurrenceReason]} />
+                  <ReviewRow label="Prioridade · SLA" value={`${form.priority} · ${form.slaHours}h`} />
+                  <ReviewRow label="Contenção" value={contencao.length ? contencao.map((c) => CONTAINMENT_ACTION_LABEL[c]).join(", ") : "—"} />
+                  {openInternal && <ReviewRow label="Ticket interno" value={`${INTERNAL_DEPT_LABEL[internal.targetDepartment]} · ${internal.slaHours}h`} />}
+                </dl>
+                <div className="rounded-md bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+                  Ao confirmar, geramos o número RO automático e disparamos as notificações.
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {err && <div className="mt-4 rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">{err}</div>}
+
+        {/* Footer nav */}
+        {!created && (
+          <div className="mt-6 flex justify-between gap-2 border-t pt-4">
+            <button type="button" onClick={() => (step === 1 ? navigate({ to: "/tickets" }) : setStep(step - 1))} className="rounded-md border px-4 py-2 text-sm font-medium hover:bg-muted">
+              {step === 1 ? "Cancelar" : "Voltar"}
+            </button>
+            {step < 4 ? (
+              <button type="button" onClick={next} className="rounded-md bg-primary px-5 py-2 text-sm font-medium text-primary-foreground hover:opacity-90">Avançar</button>
+            ) : (
+              <button type="button" onClick={finalize} className="rounded-md bg-gold px-5 py-2 text-sm font-semibold text-gold-foreground hover:opacity-90">Registrar ocorrência</button>
+            )}
+          </div>
+        )}
       </div>
-
-      <form onSubmit={submit} className="space-y-5 rounded-xl border bg-card p-6 shadow-[var(--shadow-elegant)]">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Cliente *">
-            <input value={form.customer} onChange={(e) => setForm({ ...form, customer: e.target.value })} className={inputCls} placeholder="Razão social ou nome" />
-          </Field>
-          <Field label="CNPJ / CPF">
-            <input value={form.customerDoc} onChange={(e) => setForm({ ...form, customerDoc: e.target.value })} className={inputCls} placeholder="00.000.000/0000-00" />
-          </Field>
-          <Field label="Contato (cliente)">
-            <input value={form.customerContato} onChange={(e) => setForm({ ...form, customerContato: e.target.value })} className={inputCls} placeholder="Nome do contato" />
-          </Field>
-          <Field label="Telefone">
-            <input value={form.customerTelefone} onChange={(e) => setForm({ ...form, customerTelefone: e.target.value })} className={inputCls} placeholder="(11) 90000-0000" />
-          </Field>
-          <Field label="Cidade">
-            <input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} className={inputCls} placeholder="Cidade" />
-          </Field>
-          <Field label="UF">
-            <input value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })} className={inputCls} placeholder="SP" maxLength={2} />
-          </Field>
-          <Field label="Fornecedor">
-            <input value={form.fornecedor} onChange={(e) => setForm({ ...form, fornecedor: e.target.value })} className={inputCls} placeholder="Opcional" />
-          </Field>
-          <Field label="Vendedor">
-            <input value={form.vendedor} onChange={(e) => setForm({ ...form, vendedor: e.target.value })} className={inputCls} placeholder="Responsável pela venda" />
-          </Field>
-          <Field label="Peça *">
-            <input value={form.part} onChange={(e) => setForm({ ...form, part: e.target.value })} className={inputCls} placeholder="Descrição da peça" />
-          </Field>
-          <Field label="Código da peça (ERP) *">
-            <input value={form.partCode} onChange={(e) => setForm({ ...form, partCode: e.target.value })} className={inputCls} placeholder="Ex: PF-3421" />
-          </Field>
-          <Field label="NF (número)">
-            <input value={form.nfNumero} onChange={(e) => setForm({ ...form, nfNumero: e.target.value })} className={inputCls} placeholder="Ex: 123456" />
-          </Field>
-          <Field label="NF (valor R$)">
-            <input type="number" min={0} step="0.01" value={form.nfValor} onChange={(e) => setForm({ ...form, nfValor: Number(e.target.value) })} className={inputCls} />
-          </Field>
-          <Field label="Quantidade">
-            <input type="number" min={1} value={form.quantity} onChange={(e) => setForm({ ...form, quantity: Number(e.target.value) })} className={inputCls} />
-          </Field>
-          <Field label="Valor unitário (R$)">
-            <input type="number" min={0} step="0.01" value={form.unitValue} onChange={(e) => setForm({ ...form, unitValue: Number(e.target.value) })} className={inputCls} />
-          </Field>
-          <Field label="Motivo da ocorrência *">
-            <select value={form.occurrenceReason} onChange={(e) => setForm({ ...form, occurrenceReason: e.target.value as OccurrenceReason })} className={inputCls}>
-              {(Object.keys(OCCURRENCE_REASON_LABEL) as OccurrenceReason[]).map((k) => (
-                <option key={k} value={k}>{OCCURRENCE_REASON_LABEL[k]}</option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Setor responsável">
-            <select value={form.responsibleSector} onChange={(e) => setForm({ ...form, responsibleSector: e.target.value as ResponsibleSector })} className={inputCls}>
-              {(Object.keys(RESPONSIBLE_SECTOR_LABEL) as ResponsibleSector[]).map((k) => (
-                <option key={k} value={k}>{RESPONSIBLE_SECTOR_LABEL[k]}</option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Origem">
-            <select value={form.origin} onChange={(e) => setForm({ ...form, origin: e.target.value as OccurrenceOrigin })} className={inputCls}>
-              <option value="externo">Externo (cliente)</option>
-              <option value="interno">Interno</option>
-            </select>
-          </Field>
-          <Field label="Prioridade">
-            <select value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value as TicketPriority })} className={inputCls}>
-              <option value="baixa">Baixa</option>
-              <option value="media">Média</option>
-              <option value="alta">Alta</option>
-              <option value="critica">Crítica</option>
-            </select>
-          </Field>
-          <Field label="SLA (horas)">
-            <input type="number" min={1} value={form.slaHours} onChange={(e) => setForm({ ...form, slaHours: Number(e.target.value) })} className={inputCls} />
-          </Field>
-          <Field label="Emitente (registro por)">
-            <input value={form.emitente} onChange={(e) => setForm({ ...form, emitente: e.target.value })} className={inputCls} placeholder="Auto: usuário logado" />
-          </Field>
-        </div>
-        <Field label="Narrativa da ocorrência *">
-          <textarea value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} rows={4} className={cn(inputCls, "resize-none")} placeholder="Descreva o que aconteceu, sem apontar culpados — foco em entender e resolver." />
-        </Field>
-
-        {err && <div className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">{err}</div>}
-
-        <div className="flex justify-end gap-2">
-          <button type="button" onClick={() => navigate({ to: "/tickets" })} className="rounded-md border px-4 py-2 text-sm font-medium hover:bg-muted">Cancelar</button>
-          <button type="submit" className="rounded-md bg-primary px-5 py-2 text-sm font-medium text-primary-foreground hover:opacity-90">Abrir ticket</button>
-        </div>
-      </form>
     </div>
   );
 }
@@ -169,6 +460,30 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</span>
       {children}
     </label>
+  );
+}
+
+function ReviewRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-md border bg-background px-3 py-2">
+      <dt className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</dt>
+      <dd className="mt-0.5 truncate">{value || "—"}</dd>
+    </div>
+  );
+}
+
+function NotifyRow({ icon: Icon, label, detail, ok }: { icon: React.ComponentType<{ className?: string }>; label: string; detail: string; ok: boolean }) {
+  return (
+    <div className="flex items-start gap-3 rounded-md border bg-background px-3 py-2">
+      <span className={cn("mt-0.5 flex h-7 w-7 items-center justify-center rounded-md", ok ? "bg-success/10 text-success" : "bg-muted text-muted-foreground")}>
+        <Icon className="h-3.5 w-3.5" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <div className="text-sm font-medium">{label}</div>
+        <div className="truncate text-xs text-muted-foreground">{detail}</div>
+      </div>
+      {ok && <Check className="h-4 w-4 text-success" />}
+    </div>
   );
 }
 
