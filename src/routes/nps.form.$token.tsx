@@ -1,0 +1,91 @@
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState } from "react";
+import { Logo } from "@/components/app/Logo";
+import { toast } from "sonner";
+
+export const Route = createFileRoute("/nps/form/$token")({ component: PublicNpsForm });
+
+function PublicNpsForm() {
+  const { token } = Route.useParams();
+  const [q1, setQ1] = useState<number | null>(null);
+  const [q2, setQ2] = useState<number | null>(null);
+  const [q3, setQ3] = useState<number | null>(null);
+  const [comment, setComment] = useState("");
+  const [done, setDone] = useState(false);
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (q1 === null || q2 === null || q3 === null) {
+      toast.error("Por favor, responda todas as perguntas.");
+      return;
+    }
+    // TODO: POST to public endpoint with token
+    setDone(true);
+  };
+
+  if (done) {
+    return (
+      <PublicShell>
+        <div className="rounded-xl border bg-card p-8 text-center">
+          <div className="mx-auto h-12 w-12 rounded-full bg-success/15 text-success grid place-items-center text-2xl">✓</div>
+          <h1 className="mt-4 text-xl font-semibold">Obrigado pela sua resposta!</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Sua opinião ajuda a VerticalParts a melhorar continuamente.</p>
+        </div>
+      </PublicShell>
+    );
+  }
+
+  return (
+    <PublicShell>
+      <form onSubmit={submit} className="space-y-6 rounded-xl border bg-card p-6 sm:p-8">
+        <div>
+          <p className="text-xs text-muted-foreground">Pesquisa #{token.slice(0, 8)}</p>
+          <h1 className="mt-1 text-xl font-semibold sm:text-2xl">Sua opinião é importante</h1>
+        </div>
+        <Scale label="Quão provável é você recomendar a VerticalParts?" value={q1} onChange={setQ1} />
+        <Scale label="Qual seu nível de satisfação com a resolução?" value={q2} onChange={setQ2} />
+        <Scale label="Como avalia a agilidade do atendimento?" value={q3} onChange={setQ3} />
+        <label className="block">
+          <span className="text-xs font-medium text-muted-foreground">Comentário (opcional)</span>
+          <textarea value={comment} onChange={(e) => setComment(e.target.value)} rows={3}
+            className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary" />
+        </label>
+        <button className="w-full rounded-md bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground hover:opacity-90">
+          Enviar resposta
+        </button>
+      </form>
+    </PublicShell>
+  );
+}
+
+function Scale({ label, value, onChange }: { label: string; value: number | null; onChange: (n: number) => void }) {
+  return (
+    <div>
+      <p className="text-sm font-medium">{label}</p>
+      <div className="mt-2 grid grid-cols-11 gap-1">
+        {Array.from({ length: 11 }, (_, i) => (
+          <button type="button" key={i} onClick={() => onChange(i)}
+            className={`aspect-square rounded-md border text-xs font-semibold transition-colors ${
+              value === i ? "border-gold bg-gold text-black" : "hover:border-gold/60"
+            }`}>{i}</button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function PublicShell({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="min-h-screen bg-muted/30">
+      <header className="bg-black px-4 py-4">
+        <div className="mx-auto max-w-2xl">
+          <Logo />
+        </div>
+      </header>
+      <main className="mx-auto max-w-2xl px-4 py-8">{children}</main>
+      <footer className="px-4 pb-6 text-center text-xs text-muted-foreground">
+        © VerticalParts · <Link to="/login" className="hover:text-gold">Acesso interno</Link>
+      </footer>
+    </div>
+  );
+}

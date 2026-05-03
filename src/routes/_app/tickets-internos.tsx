@@ -12,7 +12,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Plus, Building2, Clock } from "lucide-react";
 
-export const Route = createFileRoute("/internos")({ component: InternalTickets });
+export const Route = createFileRoute("/_app/tickets-internos")({ component: InternalTickets });
 
 function InternalTickets() {
   const { internalTickets, createInternalTicket, respondInternalTicket, updateInternalStatus } = useStore();
@@ -100,7 +100,7 @@ function InternalTickets() {
       )}
 
       <p className="text-xs text-muted-foreground">
-        <Link to="/tickets" className="text-gold hover:underline">← Voltar para ocorrências</Link>
+        <Link to="/ocorrencias" className="text-gold hover:underline">← Voltar para ocorrências</Link>
       </p>
     </div>
   );

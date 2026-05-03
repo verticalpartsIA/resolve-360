@@ -23,7 +23,7 @@ import {
   FileText,
 } from "lucide-react";
 
-export const Route = createFileRoute("/gestor")({ component: ManagerDashboard });
+export const Route = createFileRoute("/_app/gestor/kpis")({ component: ManagerDashboard });
 
 type Period = "semana" | "mes" | "trimestre" | "tudo";
 const PERIOD_HOURS: Record<Period, number> = {
