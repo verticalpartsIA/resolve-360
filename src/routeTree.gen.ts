@@ -20,6 +20,7 @@ import { Route as AppTicketsInternosRouteImport } from './routes/_app/tickets-in
 import { Route as AppProdutosRouteImport } from './routes/_app/produtos'
 import { Route as AppOcorrenciasRouteImport } from './routes/_app/ocorrencias'
 import { Route as AppNovaOcorrenciaRouteImport } from './routes/_app/nova-ocorrencia'
+import { Route as AppMeusTicketsRouteImport } from './routes/_app/meus-tickets'
 import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
 import { Route as AppClientesRouteImport } from './routes/_app/clientes'
 import { Route as NpsFormTokenRouteImport } from './routes/nps.form.$token'
@@ -95,6 +96,11 @@ const AppOcorrenciasRoute = AppOcorrenciasRouteImport.update({
 const AppNovaOcorrenciaRoute = AppNovaOcorrenciaRouteImport.update({
   id: '/nova-ocorrencia',
   path: '/nova-ocorrencia',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppMeusTicketsRoute = AppMeusTicketsRouteImport.update({
+  id: '/meus-tickets',
+  path: '/meus-tickets',
   getParentRoute: () => AppRoute,
 } as any)
 const AppDashboardRoute = AppDashboardRouteImport.update({
@@ -219,6 +225,7 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/clientes': typeof AppClientesRoute
   '/dashboard': typeof AppDashboardRoute
+  '/meus-tickets': typeof AppMeusTicketsRoute
   '/nova-ocorrencia': typeof AppNovaOcorrenciaRoute
   '/ocorrencias': typeof AppOcorrenciasRoute
   '/produtos': typeof AppProdutosRoute
@@ -253,6 +260,7 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/clientes': typeof AppClientesRoute
   '/dashboard': typeof AppDashboardRoute
+  '/meus-tickets': typeof AppMeusTicketsRoute
   '/nova-ocorrencia': typeof AppNovaOcorrenciaRoute
   '/ocorrencias': typeof AppOcorrenciasRoute
   '/produtos': typeof AppProdutosRoute
@@ -289,6 +297,7 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/_app/clientes': typeof AppClientesRoute
   '/_app/dashboard': typeof AppDashboardRoute
+  '/_app/meus-tickets': typeof AppMeusTicketsRoute
   '/_app/nova-ocorrencia': typeof AppNovaOcorrenciaRoute
   '/_app/ocorrencias': typeof AppOcorrenciasRoute
   '/_app/produtos': typeof AppProdutosRoute
@@ -325,6 +334,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/clientes'
     | '/dashboard'
+    | '/meus-tickets'
     | '/nova-ocorrencia'
     | '/ocorrencias'
     | '/produtos'
@@ -359,6 +369,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/clientes'
     | '/dashboard'
+    | '/meus-tickets'
     | '/nova-ocorrencia'
     | '/ocorrencias'
     | '/produtos'
@@ -394,6 +405,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/_app/clientes'
     | '/_app/dashboard'
+    | '/_app/meus-tickets'
     | '/_app/nova-ocorrencia'
     | '/_app/ocorrencias'
     | '/_app/produtos'
@@ -508,6 +520,13 @@ declare module '@tanstack/react-router' {
       path: '/nova-ocorrencia'
       fullPath: '/nova-ocorrencia'
       preLoaderRoute: typeof AppNovaOcorrenciaRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/meus-tickets': {
+      id: '/_app/meus-tickets'
+      path: '/meus-tickets'
+      fullPath: '/meus-tickets'
+      preLoaderRoute: typeof AppMeusTicketsRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/dashboard': {
@@ -694,6 +713,7 @@ const AppOcorrenciaRoRouteWithChildren = AppOcorrenciaRoRoute._addFileChildren(
 interface AppRouteChildren {
   AppClientesRoute: typeof AppClientesRoute
   AppDashboardRoute: typeof AppDashboardRoute
+  AppMeusTicketsRoute: typeof AppMeusTicketsRoute
   AppNovaOcorrenciaRoute: typeof AppNovaOcorrenciaRoute
   AppOcorrenciasRoute: typeof AppOcorrenciasRoute
   AppProdutosRoute: typeof AppProdutosRoute
@@ -721,6 +741,7 @@ interface AppRouteChildren {
 const AppRouteChildren: AppRouteChildren = {
   AppClientesRoute: AppClientesRoute,
   AppDashboardRoute: AppDashboardRoute,
+  AppMeusTicketsRoute: AppMeusTicketsRoute,
   AppNovaOcorrenciaRoute: AppNovaOcorrenciaRoute,
   AppOcorrenciasRoute: AppOcorrenciasRoute,
   AppProdutosRoute: AppProdutosRoute,
