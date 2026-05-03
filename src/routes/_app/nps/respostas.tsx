@@ -12,7 +12,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Plus, TrendingUp, Smile, Meh, Frown } from "lucide-react";
 
-export const Route = createFileRoute("/nps")({ component: NpsPage });
+export const Route = createFileRoute("/_app/nps/respostas")({ component: NpsPage });
 
 function NpsPage() {
   const { npsRecords, tickets, submitNpsSurvey } = useStore();

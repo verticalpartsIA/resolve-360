@@ -9,181 +9,218 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as NpsRouteImport } from './routes/nps'
-import { Route as InternosRouteImport } from './routes/internos'
-import { Route as GestorRouteImport } from './routes/gestor'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as TicketsIndexRouteImport } from './routes/tickets.index'
-import { Route as TicketsNovoRouteImport } from './routes/tickets.novo'
-import { Route as TicketsIdRouteImport } from './routes/tickets.$id'
+import { Route as AppRouteImport } from './routes/_app'
+import { Route as AppTicketsInternosRouteImport } from './routes/_app/tickets-internos'
+import { Route as AppNovaOcorrenciaRouteImport } from './routes/_app/nova-ocorrencia'
+import { Route as AppMeusTicketsRouteImport } from './routes/_app/meus-tickets'
+import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
+import { Route as AppTicketIntRouteImport } from './routes/_app/ticket.$int'
+import { Route as AppNpsRespostasRouteImport } from './routes/_app/nps/respostas'
+import { Route as AppGestorKpisRouteImport } from './routes/_app/gestor/kpis'
 
-const NpsRoute = NpsRouteImport.update({
-  id: '/nps',
-  path: '/nps',
+const AppRoute = AppRouteImport.update({
+  id: '/_app',
   getParentRoute: () => rootRouteImport,
 } as any)
-const InternosRoute = InternosRouteImport.update({
-  id: '/internos',
-  path: '/internos',
-  getParentRoute: () => rootRouteImport,
+const AppTicketsInternosRoute = AppTicketsInternosRouteImport.update({
+  id: '/tickets-internos',
+  path: '/tickets-internos',
+  getParentRoute: () => AppRoute,
 } as any)
-const GestorRoute = GestorRouteImport.update({
-  id: '/gestor',
-  path: '/gestor',
-  getParentRoute: () => rootRouteImport,
+const AppNovaOcorrenciaRoute = AppNovaOcorrenciaRouteImport.update({
+  id: '/nova-ocorrencia',
+  path: '/nova-ocorrencia',
+  getParentRoute: () => AppRoute,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => rootRouteImport,
+const AppMeusTicketsRoute = AppMeusTicketsRouteImport.update({
+  id: '/meus-tickets',
+  path: '/meus-tickets',
+  getParentRoute: () => AppRoute,
 } as any)
-const TicketsIndexRoute = TicketsIndexRouteImport.update({
-  id: '/tickets/',
-  path: '/tickets/',
-  getParentRoute: () => rootRouteImport,
+const AppDashboardRoute = AppDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AppRoute,
 } as any)
-const TicketsNovoRoute = TicketsNovoRouteImport.update({
-  id: '/tickets/novo',
-  path: '/tickets/novo',
-  getParentRoute: () => rootRouteImport,
+const AppTicketIntRoute = AppTicketIntRouteImport.update({
+  id: '/ticket/$int',
+  path: '/ticket/$int',
+  getParentRoute: () => AppRoute,
 } as any)
-const TicketsIdRoute = TicketsIdRouteImport.update({
-  id: '/tickets/$id',
-  path: '/tickets/$id',
-  getParentRoute: () => rootRouteImport,
+const AppNpsRespostasRoute = AppNpsRespostasRouteImport.update({
+  id: '/nps/respostas',
+  path: '/nps/respostas',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppGestorKpisRoute = AppGestorKpisRouteImport.update({
+  id: '/gestor/kpis',
+  path: '/gestor/kpis',
+  getParentRoute: () => AppRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
-  '/gestor': typeof GestorRoute
-  '/internos': typeof InternosRoute
-  '/nps': typeof NpsRoute
-  '/tickets/$id': typeof TicketsIdRoute
-  '/tickets/novo': typeof TicketsNovoRoute
-  '/tickets/': typeof TicketsIndexRoute
+  '/': typeof AppRouteWithChildren
+  '/dashboard': typeof AppDashboardRoute
+  '/meus-tickets': typeof AppMeusTicketsRoute
+  '/nova-ocorrencia': typeof AppNovaOcorrenciaRoute
+  '/tickets-internos': typeof AppTicketsInternosRoute
+  '/gestor/kpis': typeof AppGestorKpisRoute
+  '/nps/respostas': typeof AppNpsRespostasRoute
+  '/ticket/$int': typeof AppTicketIntRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
-  '/gestor': typeof GestorRoute
-  '/internos': typeof InternosRoute
-  '/nps': typeof NpsRoute
-  '/tickets/$id': typeof TicketsIdRoute
-  '/tickets/novo': typeof TicketsNovoRoute
-  '/tickets': typeof TicketsIndexRoute
+  '/': typeof AppRouteWithChildren
+  '/dashboard': typeof AppDashboardRoute
+  '/meus-tickets': typeof AppMeusTicketsRoute
+  '/nova-ocorrencia': typeof AppNovaOcorrenciaRoute
+  '/tickets-internos': typeof AppTicketsInternosRoute
+  '/gestor/kpis': typeof AppGestorKpisRoute
+  '/nps/respostas': typeof AppNpsRespostasRoute
+  '/ticket/$int': typeof AppTicketIntRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
-  '/gestor': typeof GestorRoute
-  '/internos': typeof InternosRoute
-  '/nps': typeof NpsRoute
-  '/tickets/$id': typeof TicketsIdRoute
-  '/tickets/novo': typeof TicketsNovoRoute
-  '/tickets/': typeof TicketsIndexRoute
+  '/_app': typeof AppRouteWithChildren
+  '/_app/dashboard': typeof AppDashboardRoute
+  '/_app/meus-tickets': typeof AppMeusTicketsRoute
+  '/_app/nova-ocorrencia': typeof AppNovaOcorrenciaRoute
+  '/_app/tickets-internos': typeof AppTicketsInternosRoute
+  '/_app/gestor/kpis': typeof AppGestorKpisRoute
+  '/_app/nps/respostas': typeof AppNpsRespostasRoute
+  '/_app/ticket/$int': typeof AppTicketIntRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/gestor'
-    | '/internos'
-    | '/nps'
-    | '/tickets/$id'
-    | '/tickets/novo'
-    | '/tickets/'
+    | '/dashboard'
+    | '/meus-tickets'
+    | '/nova-ocorrencia'
+    | '/tickets-internos'
+    | '/gestor/kpis'
+    | '/nps/respostas'
+    | '/ticket/$int'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/gestor'
-    | '/internos'
-    | '/nps'
-    | '/tickets/$id'
-    | '/tickets/novo'
-    | '/tickets'
+    | '/dashboard'
+    | '/meus-tickets'
+    | '/nova-ocorrencia'
+    | '/tickets-internos'
+    | '/gestor/kpis'
+    | '/nps/respostas'
+    | '/ticket/$int'
   id:
     | '__root__'
-    | '/'
-    | '/gestor'
-    | '/internos'
-    | '/nps'
-    | '/tickets/$id'
-    | '/tickets/novo'
-    | '/tickets/'
+    | '/_app'
+    | '/_app/dashboard'
+    | '/_app/meus-tickets'
+    | '/_app/nova-ocorrencia'
+    | '/_app/tickets-internos'
+    | '/_app/gestor/kpis'
+    | '/_app/nps/respostas'
+    | '/_app/ticket/$int'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
-  GestorRoute: typeof GestorRoute
-  InternosRoute: typeof InternosRoute
-  NpsRoute: typeof NpsRoute
-  TicketsIdRoute: typeof TicketsIdRoute
-  TicketsNovoRoute: typeof TicketsNovoRoute
-  TicketsIndexRoute: typeof TicketsIndexRoute
+  AppRoute: typeof AppRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/nps': {
-      id: '/nps'
-      path: '/nps'
-      fullPath: '/nps'
-      preLoaderRoute: typeof NpsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/internos': {
-      id: '/internos'
-      path: '/internos'
-      fullPath: '/internos'
-      preLoaderRoute: typeof InternosRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/gestor': {
-      id: '/gestor'
-      path: '/gestor'
-      fullPath: '/gestor'
-      preLoaderRoute: typeof GestorRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/': {
-      id: '/'
-      path: '/'
+    '/_app': {
+      id: '/_app'
+      path: ''
       fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+      preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/tickets/': {
-      id: '/tickets/'
-      path: '/tickets'
-      fullPath: '/tickets/'
-      preLoaderRoute: typeof TicketsIndexRouteImport
-      parentRoute: typeof rootRouteImport
+    '/_app/tickets-internos': {
+      id: '/_app/tickets-internos'
+      path: '/tickets-internos'
+      fullPath: '/tickets-internos'
+      preLoaderRoute: typeof AppTicketsInternosRouteImport
+      parentRoute: typeof AppRoute
     }
-    '/tickets/novo': {
-      id: '/tickets/novo'
-      path: '/tickets/novo'
-      fullPath: '/tickets/novo'
-      preLoaderRoute: typeof TicketsNovoRouteImport
-      parentRoute: typeof rootRouteImport
+    '/_app/nova-ocorrencia': {
+      id: '/_app/nova-ocorrencia'
+      path: '/nova-ocorrencia'
+      fullPath: '/nova-ocorrencia'
+      preLoaderRoute: typeof AppNovaOcorrenciaRouteImport
+      parentRoute: typeof AppRoute
     }
-    '/tickets/$id': {
-      id: '/tickets/$id'
-      path: '/tickets/$id'
-      fullPath: '/tickets/$id'
-      preLoaderRoute: typeof TicketsIdRouteImport
-      parentRoute: typeof rootRouteImport
+    '/_app/meus-tickets': {
+      id: '/_app/meus-tickets'
+      path: '/meus-tickets'
+      fullPath: '/meus-tickets'
+      preLoaderRoute: typeof AppMeusTicketsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/dashboard': {
+      id: '/_app/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AppDashboardRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/ticket/$int': {
+      id: '/_app/ticket/$int'
+      path: '/ticket/$int'
+      fullPath: '/ticket/$int'
+      preLoaderRoute: typeof AppTicketIntRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/nps/respostas': {
+      id: '/_app/nps/respostas'
+      path: '/nps/respostas'
+      fullPath: '/nps/respostas'
+      preLoaderRoute: typeof AppNpsRespostasRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/gestor/kpis': {
+      id: '/_app/gestor/kpis'
+      path: '/gestor/kpis'
+      fullPath: '/gestor/kpis'
+      preLoaderRoute: typeof AppGestorKpisRouteImport
+      parentRoute: typeof AppRoute
     }
   }
 }
 
+interface AppRouteChildren {
+  AppDashboardRoute: typeof AppDashboardRoute
+  AppMeusTicketsRoute: typeof AppMeusTicketsRoute
+  AppNovaOcorrenciaRoute: typeof AppNovaOcorrenciaRoute
+  AppTicketsInternosRoute: typeof AppTicketsInternosRoute
+  AppGestorKpisRoute: typeof AppGestorKpisRoute
+  AppNpsRespostasRoute: typeof AppNpsRespostasRoute
+  AppTicketIntRoute: typeof AppTicketIntRoute
+}
+
+const AppRouteChildren: AppRouteChildren = {
+  AppDashboardRoute: AppDashboardRoute,
+  AppMeusTicketsRoute: AppMeusTicketsRoute,
+  AppNovaOcorrenciaRoute: AppNovaOcorrenciaRoute,
+  AppTicketsInternosRoute: AppTicketsInternosRoute,
+  AppGestorKpisRoute: AppGestorKpisRoute,
+  AppNpsRespostasRoute: AppNpsRespostasRoute,
+  AppTicketIntRoute: AppTicketIntRoute,
+}
+
+const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
-  GestorRoute: GestorRoute,
-  InternosRoute: InternosRoute,
-  NpsRoute: NpsRoute,
-  TicketsIdRoute: TicketsIdRoute,
-  TicketsNovoRoute: TicketsNovoRoute,
-  TicketsIndexRoute: TicketsIndexRoute,
+  AppRoute: AppRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}

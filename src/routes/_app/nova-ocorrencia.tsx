@@ -19,7 +19,7 @@ import {
 import { MessageCircle, FileEdit, Check, Bell, Mail, Phone, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/tickets/novo")({ component: NewTicket });
+export const Route = createFileRoute("/_app/nova-ocorrencia")({ component: NewTicket });
 
 const STEPS = [
   { n: 1, title: "Triagem", desc: "Cliente e canal" },

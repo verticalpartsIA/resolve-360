@@ -16,7 +16,7 @@ import { SlaBar } from "@/components/app/SlaBar";
 import { ArrowLeft, ShieldCheck, Clock, User, MessageCircle, FileEdit, Star, AlertTriangle, Users, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/tickets/$id")({ component: TicketDetail });
+export const Route = createFileRoute("/_app/ticket/$int")({ component: TicketDetail });
 
 function TicketDetail() {
   const { id } = Route.useParams();

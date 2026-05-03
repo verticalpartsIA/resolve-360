@@ -4,7 +4,7 @@ import { StatusBadge, PriorityBadge } from "@/components/app/StatusBadge";
 import { SlaBar } from "@/components/app/SlaBar";
 import { ArrowUpRight, Clock, AlertTriangle, CheckCircle2, MessageCircle } from "lucide-react";
 
-export const Route = createFileRoute("/")({ component: OperatorDashboard });
+export const Route = createFileRoute("/_app/dashboard")({ component: OperatorDashboard });
 
 function OperatorDashboard() {
   const { tickets } = useStore();

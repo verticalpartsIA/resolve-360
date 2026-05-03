@@ -6,7 +6,7 @@ import { SlaBar } from "@/components/app/SlaBar";
 import { STATUS_LABEL, type TicketStatus } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/tickets/")({ component: TicketsList });
+export const Route = createFileRoute("/_app/tickets-internos")({ component: TicketsList });
 
 const filters: ("todos" | TicketStatus)[] = ["todos", "aberto", "analise", "laudo", "concluido"];
 

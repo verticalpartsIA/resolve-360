@@ -12,7 +12,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Plus, Building2, Clock } from "lucide-react";
 
-export const Route = createFileRoute("/internos")({ component: InternalTickets });
+export const Route = createFileRoute("/_app/meus-tickets")({ component: InternalTickets });
 
 function InternalTickets() {
   const { internalTickets, createInternalTicket, respondInternalTicket, updateInternalStatus } = useStore();
