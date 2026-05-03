@@ -22,10 +22,16 @@ function NewTicket() {
   const [form, setForm] = useState({
     customer: "",
     customerDoc: "",
+    customerContato: "",
+    customerTelefone: "",
     city: "",
     state: "",
+    fornecedor: "",
     part: "",
     partCode: "",
+    vendedor: "",
+    nfNumero: "",
+    nfValor: 0,
     quantity: 1,
     unitValue: 0,
     reason: "",
@@ -34,6 +40,7 @@ function NewTicket() {
     occurrenceReason: "devolucao_total" as OccurrenceReason,
     responsibleSector: "nao_aplica" as ResponsibleSector,
     origin: "externo" as OccurrenceOrigin,
+    emitente: "",
   });
   const [err, setErr] = useState<string | null>(null);
 
@@ -68,17 +75,35 @@ function NewTicket() {
           <Field label="CNPJ / CPF">
             <input value={form.customerDoc} onChange={(e) => setForm({ ...form, customerDoc: e.target.value })} className={inputCls} placeholder="00.000.000/0000-00" />
           </Field>
+          <Field label="Contato (cliente)">
+            <input value={form.customerContato} onChange={(e) => setForm({ ...form, customerContato: e.target.value })} className={inputCls} placeholder="Nome do contato" />
+          </Field>
+          <Field label="Telefone">
+            <input value={form.customerTelefone} onChange={(e) => setForm({ ...form, customerTelefone: e.target.value })} className={inputCls} placeholder="(11) 90000-0000" />
+          </Field>
           <Field label="Cidade">
             <input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} className={inputCls} placeholder="Cidade" />
           </Field>
           <Field label="UF">
             <input value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })} className={inputCls} placeholder="SP" maxLength={2} />
           </Field>
+          <Field label="Fornecedor">
+            <input value={form.fornecedor} onChange={(e) => setForm({ ...form, fornecedor: e.target.value })} className={inputCls} placeholder="Opcional" />
+          </Field>
+          <Field label="Vendedor">
+            <input value={form.vendedor} onChange={(e) => setForm({ ...form, vendedor: e.target.value })} className={inputCls} placeholder="Responsável pela venda" />
+          </Field>
           <Field label="Peça *">
             <input value={form.part} onChange={(e) => setForm({ ...form, part: e.target.value })} className={inputCls} placeholder="Descrição da peça" />
           </Field>
           <Field label="Código da peça (ERP) *">
             <input value={form.partCode} onChange={(e) => setForm({ ...form, partCode: e.target.value })} className={inputCls} placeholder="Ex: PF-3421" />
+          </Field>
+          <Field label="NF (número)">
+            <input value={form.nfNumero} onChange={(e) => setForm({ ...form, nfNumero: e.target.value })} className={inputCls} placeholder="Ex: 123456" />
+          </Field>
+          <Field label="NF (valor R$)">
+            <input type="number" min={0} step="0.01" value={form.nfValor} onChange={(e) => setForm({ ...form, nfValor: Number(e.target.value) })} className={inputCls} />
           </Field>
           <Field label="Quantidade">
             <input type="number" min={1} value={form.quantity} onChange={(e) => setForm({ ...form, quantity: Number(e.target.value) })} className={inputCls} />
@@ -116,6 +141,9 @@ function NewTicket() {
           </Field>
           <Field label="SLA (horas)">
             <input type="number" min={1} value={form.slaHours} onChange={(e) => setForm({ ...form, slaHours: Number(e.target.value) })} className={inputCls} />
+          </Field>
+          <Field label="Emitente (registro por)">
+            <input value={form.emitente} onChange={(e) => setForm({ ...form, emitente: e.target.value })} className={inputCls} placeholder="Auto: usuário logado" />
           </Field>
         </div>
         <Field label="Narrativa da ocorrência *">
