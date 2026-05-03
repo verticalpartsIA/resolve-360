@@ -86,8 +86,8 @@
   --success-foreground: oklch(1 0 0);
   --warning: oklch(0.78 0.16 75);
   --warning-foreground: oklch(0.15 0 0);
-  --border: #E5E5E5;
-  --input: #E5E5E5;
+  --border: #E8D4A0;
+  --input: #E8D4A0;
   --ring: #D4AF37;
   --chart-1: #D4AF37;
   --chart-2: #000000;
