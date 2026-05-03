@@ -95,7 +95,7 @@ function RelatorioFO504() {
     // ───── 4. NPS ─────
     const npsRows: (string | number)[][] = [
       ["FO-OEA-Q-504 — NPS"], [],
-      ["NPS Score Geral", data.nps.score],
+      ["NPS Score Geral", data.nps.npsScore],
       ["Total de Respostas", data.nps.total],
       ["Promotores (9-10)", data.nps.promotores, fmtPct(data.nps.pctPromotores)],
       ["Neutros (7-8)", data.nps.neutros, fmtPct(data.nps.pctNeutros)],
@@ -105,7 +105,7 @@ function RelatorioFO504() {
       ...data.nps.distribuicao.map((d) => [d.nota, d.count]),
       [], ["NPS por Tipo de Cliente"],
       ["Tier", "Score", "Respostas"],
-      ...data.nps.porTier.map((t) => [t.tier, t.score, t.count]),
+      ...data.nps.porTier.map((t) => [t.tier, t.npsScore, t.count]),
       [], ["Feedbacks de Detratores"],
       ["Cliente", "Nota Recomendação", "Feedback", "Data"],
       ...data.nps.feedbacksDetratores.map((f) => [f.customer, f.score, f.feedback, f.date]),
@@ -223,7 +223,7 @@ function RelatorioFO504() {
           </div>
           <div className="mt-3 rounded-md border bg-muted/40 p-3 text-center">
             <div className="text-xs uppercase text-muted-foreground">NPS Score</div>
-            <div className="mt-0.5 text-2xl font-bold">{data.nps.score}</div>
+            <div className="mt-0.5 text-2xl font-bold">{data.nps.npsScore}</div>
           </div>
         </Card>
 
