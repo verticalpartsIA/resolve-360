@@ -4,6 +4,7 @@ import { useStore } from "@/lib/store";
 import {
   INTERNAL_DEPT_LABEL,
   INTERNAL_STATUS_LABEL,
+  INTERNAL_DEFAULT_SLA,
   type InternalDepartment,
   type InternalPriority,
   type InternalTicketStatus,
@@ -235,7 +236,7 @@ function NewInternalDialog({
     priority: "media" as InternalPriority,
     subject: "",
     description: "",
-    slaHours: 24,
+    slaHours: INTERNAL_DEFAULT_SLA.engenharia,
   });
   const valid = form.subject.trim() && form.description.trim();
 
@@ -250,7 +251,10 @@ function NewInternalDialog({
             <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Setor destino</span>
             <select
               value={form.targetDepartment}
-              onChange={(e) => setForm({ ...form, targetDepartment: e.target.value as InternalDepartment })}
+              onChange={(e) => {
+                const d = e.target.value as InternalDepartment;
+                setForm({ ...form, targetDepartment: d, slaHours: INTERNAL_DEFAULT_SLA[d] });
+              }}
               className="mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm"
             >
               {(Object.keys(INTERNAL_DEPT_LABEL) as InternalDepartment[]).map((d) => (
