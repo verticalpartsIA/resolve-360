@@ -37,7 +37,7 @@ function TicketDetail() {
     if (!rootCause) { setResolveErr("Selecione a causa raiz."); return; }
     if (justification.trim().length < 10) { setResolveErr("Justificativa deve ter ao menos 10 caracteres."); return; }
     if (report.trim().length < 10) { setResolveErr("Laudo técnico é obrigatório."); return; }
-    resolveTicket(ticket.id, { rootCause: rootCause as RootCause, justification, report });
+    resolveTicket(ticket!.id, { rootCause: rootCause as RootCause, justification, report });
     setResolving(false);
     router.invalidate();
   }
