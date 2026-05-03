@@ -8,7 +8,7 @@
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "postbuild": "node scripts/write-hostinger-entry.mjs",
-    "start": "node dist/server.js",
+    "start": "node server.js",
     "preview": "vite preview",
     "lint": "eslint .",
     "format": "prettier --write ."

@@ -6,7 +6,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const projectRoot = path.resolve(__dirname, "..");
 const distDir = path.join(projectRoot, "dist");
-const entryPath = path.join(distDir, "server.js");
+const distEntryPath = path.join(distDir, "server.js");
+const rootEntryPath = path.join(projectRoot, "server.js");
 
 const entrySource = `import { createServer } from "node:http";
 import { Readable } from "node:stream";
@@ -100,5 +101,7 @@ server.listen(port, host, () => {
 `;
 
 await mkdir(distDir, { recursive: true });
-await writeFile(entryPath, entrySource, "utf8");
-console.log(`[Hostinger Runtime] Wrote ${path.relative(projectRoot, entryPath)}`);
+await writeFile(distEntryPath, entrySource, "utf8");
+await writeFile(rootEntryPath, 'await import("./dist/server.js");\n', "utf8");
+console.log(`[Hostinger Runtime] Wrote ${path.relative(projectRoot, distEntryPath)}`);
+console.log(`[Hostinger Runtime] Wrote ${path.relative(projectRoot, rootEntryPath)}`);
