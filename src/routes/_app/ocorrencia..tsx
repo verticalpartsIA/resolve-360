@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/_app/ocorrencia/$ro")({ component: TicketDetail });
+export const Route = createFileRoute("/_app/ocorrencia/")({ component: TicketDetail });
 
 type TabKey = "visao" | "internos" | "comunicacao" | "qualidade" | "nps";
 const TABS: { key: TabKey; label: string; icon: typeof Eye }[] = [
