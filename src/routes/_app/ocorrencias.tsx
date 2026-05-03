@@ -28,7 +28,7 @@ function TicketsList() {
           <p className="text-xs font-medium uppercase tracking-[0.18em] text-gold">Tickets</p>
           <h1 className="mt-1 text-2xl font-semibold sm:text-3xl">Todos os tickets</h1>
         </div>
-        <Link to="/tickets/novo" className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90">
+        <Link to="/nova-ocorrencia" className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90">
           + Novo ticket
         </Link>
       </div>
@@ -71,8 +71,8 @@ function TicketsList() {
           {filtered.map((t) => (
             <li key={t.id}>
               <Link
-                to="/tickets/$id"
-                params={{ id: t.id }}
+                to="/ocorrencia/$ro"
+                params={{ ro: t.code }}
                 className="grid grid-cols-1 gap-3 px-5 py-4 hover:bg-muted/40 lg:grid-cols-[120px_1fr_auto_120px_140px_40px] lg:items-center lg:gap-4"
               >
                 <span className="font-mono text-xs font-semibold">{t.code}</span>

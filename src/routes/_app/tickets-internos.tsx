@@ -100,7 +100,7 @@ function InternalTickets() {
       )}
 
       <p className="text-xs text-muted-foreground">
-        <Link to="/tickets" className="text-gold hover:underline">← Voltar para ocorrências</Link>
+        <Link to="/ocorrencias" className="text-gold hover:underline">← Voltar para ocorrências</Link>
       </p>
     </div>
   );

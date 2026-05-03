@@ -25,7 +25,7 @@ function OperatorDashboard() {
             {open.length} tickets em andamento · {atRisk} demandam atenção imediata
           </p>
         </div>
-        <Link to="/tickets/novo" className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90">
+        <Link to="/nova-ocorrencia" className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90">
           + Novo ticket
         </Link>
       </div>
@@ -43,14 +43,14 @@ function OperatorDashboard() {
             <h2 className="text-base font-semibold">Fila de atendimento</h2>
             <p className="text-xs text-muted-foreground">Ordenada por proximidade do SLA</p>
           </div>
-          <Link to="/tickets" className="text-xs font-medium text-gold hover:underline inline-flex items-center gap-1">
+          <Link to="/ocorrencias" className="text-xs font-medium text-gold hover:underline inline-flex items-center gap-1">
             Ver todos <ArrowUpRight className="h-3 w-3" />
           </Link>
         </header>
         <ul className="divide-y">
           {sorted.map((t) => (
             <li key={t.id}>
-              <Link to="/tickets/$id" params={{ id: t.id }} className="grid grid-cols-1 gap-3 px-5 py-4 hover:bg-muted/40 sm:grid-cols-[auto_1fr_auto_140px] sm:items-center">
+              <Link to="/ocorrencia/$ro" params={{ ro: t.code }} className="grid grid-cols-1 gap-3 px-5 py-4 hover:bg-muted/40 sm:grid-cols-[auto_1fr_auto_140px] sm:items-center">
                 <div className="flex items-center gap-3">
                   <span className="font-mono text-xs font-semibold text-muted-foreground">{t.code}</span>
                   <PriorityBadge priority={t.priority} />

@@ -28,7 +28,7 @@ function TicketDetail() {
     return (
       <div className="mx-auto max-w-2xl rounded-xl border bg-card p-8 text-center">
         <h2 className="text-lg font-semibold">Ticket não encontrado</h2>
-        <Link to="/tickets" className="mt-4 inline-block text-sm text-gold hover:underline">← Voltar para tickets</Link>
+        <Link to="/ocorrencias" className="mt-4 inline-block text-sm text-gold hover:underline">← Voltar para tickets</Link>
       </div>
     );
   }
@@ -57,7 +57,7 @@ function TicketDetail() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
-        <Link to="/tickets" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
+        <Link to="/ocorrencias" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-4 w-4" /> Tickets
         </Link>
         <span className="font-mono text-xs font-semibold text-muted-foreground">{ticket.code}</span>
@@ -215,7 +215,7 @@ function TicketDetail() {
                   </div>
                   <div className="text-sm font-medium">{it.subject}</div>
                 </div>
-                <Link to="/internos" className="text-[11px] font-semibold text-gold hover:underline">
+                <Link to="/tickets-internos" className="text-[11px] font-semibold text-gold hover:underline">
                   {INTERNAL_STATUS_LABEL[it.status]} →
                 </Link>
               </li>

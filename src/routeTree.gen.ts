@@ -11,10 +11,10 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as AppTicketsInternosRouteImport } from './routes/_app/tickets-internos'
+import { Route as AppOcorrenciasRouteImport } from './routes/_app/ocorrencias'
 import { Route as AppNovaOcorrenciaRouteImport } from './routes/_app/nova-ocorrencia'
-import { Route as AppMeusTicketsRouteImport } from './routes/_app/meus-tickets'
 import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
-import { Route as AppTicketIntRouteImport } from './routes/_app/ticket.$int'
+import { Route as AppOcorrenciaRoRouteImport } from './routes/_app/ocorrencia.$ro'
 import { Route as AppNpsRespostasRouteImport } from './routes/_app/nps/respostas'
 import { Route as AppGestorKpisRouteImport } from './routes/_app/gestor/kpis'
 
@@ -27,14 +27,14 @@ const AppTicketsInternosRoute = AppTicketsInternosRouteImport.update({
   path: '/tickets-internos',
   getParentRoute: () => AppRoute,
 } as any)
+const AppOcorrenciasRoute = AppOcorrenciasRouteImport.update({
+  id: '/ocorrencias',
+  path: '/ocorrencias',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppNovaOcorrenciaRoute = AppNovaOcorrenciaRouteImport.update({
   id: '/nova-ocorrencia',
   path: '/nova-ocorrencia',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppMeusTicketsRoute = AppMeusTicketsRouteImport.update({
-  id: '/meus-tickets',
-  path: '/meus-tickets',
   getParentRoute: () => AppRoute,
 } as any)
 const AppDashboardRoute = AppDashboardRouteImport.update({
@@ -42,9 +42,9 @@ const AppDashboardRoute = AppDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AppRoute,
 } as any)
-const AppTicketIntRoute = AppTicketIntRouteImport.update({
-  id: '/ticket/$int',
-  path: '/ticket/$int',
+const AppOcorrenciaRoRoute = AppOcorrenciaRoRouteImport.update({
+  id: '/ocorrencia/$ro',
+  path: '/ocorrencia/$ro',
   getParentRoute: () => AppRoute,
 } as any)
 const AppNpsRespostasRoute = AppNpsRespostasRouteImport.update({
@@ -61,65 +61,65 @@ const AppGestorKpisRoute = AppGestorKpisRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof AppRouteWithChildren
   '/dashboard': typeof AppDashboardRoute
-  '/meus-tickets': typeof AppMeusTicketsRoute
   '/nova-ocorrencia': typeof AppNovaOcorrenciaRoute
+  '/ocorrencias': typeof AppOcorrenciasRoute
   '/tickets-internos': typeof AppTicketsInternosRoute
   '/gestor/kpis': typeof AppGestorKpisRoute
   '/nps/respostas': typeof AppNpsRespostasRoute
-  '/ticket/$int': typeof AppTicketIntRoute
+  '/ocorrencia/$ro': typeof AppOcorrenciaRoRoute
 }
 export interface FileRoutesByTo {
   '/': typeof AppRouteWithChildren
   '/dashboard': typeof AppDashboardRoute
-  '/meus-tickets': typeof AppMeusTicketsRoute
   '/nova-ocorrencia': typeof AppNovaOcorrenciaRoute
+  '/ocorrencias': typeof AppOcorrenciasRoute
   '/tickets-internos': typeof AppTicketsInternosRoute
   '/gestor/kpis': typeof AppGestorKpisRoute
   '/nps/respostas': typeof AppNpsRespostasRoute
-  '/ticket/$int': typeof AppTicketIntRoute
+  '/ocorrencia/$ro': typeof AppOcorrenciaRoRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_app': typeof AppRouteWithChildren
   '/_app/dashboard': typeof AppDashboardRoute
-  '/_app/meus-tickets': typeof AppMeusTicketsRoute
   '/_app/nova-ocorrencia': typeof AppNovaOcorrenciaRoute
+  '/_app/ocorrencias': typeof AppOcorrenciasRoute
   '/_app/tickets-internos': typeof AppTicketsInternosRoute
   '/_app/gestor/kpis': typeof AppGestorKpisRoute
   '/_app/nps/respostas': typeof AppNpsRespostasRoute
-  '/_app/ticket/$int': typeof AppTicketIntRoute
+  '/_app/ocorrencia/$ro': typeof AppOcorrenciaRoRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/dashboard'
-    | '/meus-tickets'
     | '/nova-ocorrencia'
+    | '/ocorrencias'
     | '/tickets-internos'
     | '/gestor/kpis'
     | '/nps/respostas'
-    | '/ticket/$int'
+    | '/ocorrencia/$ro'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/dashboard'
-    | '/meus-tickets'
     | '/nova-ocorrencia'
+    | '/ocorrencias'
     | '/tickets-internos'
     | '/gestor/kpis'
     | '/nps/respostas'
-    | '/ticket/$int'
+    | '/ocorrencia/$ro'
   id:
     | '__root__'
     | '/_app'
     | '/_app/dashboard'
-    | '/_app/meus-tickets'
     | '/_app/nova-ocorrencia'
+    | '/_app/ocorrencias'
     | '/_app/tickets-internos'
     | '/_app/gestor/kpis'
     | '/_app/nps/respostas'
-    | '/_app/ticket/$int'
+    | '/_app/ocorrencia/$ro'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -142,18 +142,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppTicketsInternosRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/ocorrencias': {
+      id: '/_app/ocorrencias'
+      path: '/ocorrencias'
+      fullPath: '/ocorrencias'
+      preLoaderRoute: typeof AppOcorrenciasRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/nova-ocorrencia': {
       id: '/_app/nova-ocorrencia'
       path: '/nova-ocorrencia'
       fullPath: '/nova-ocorrencia'
       preLoaderRoute: typeof AppNovaOcorrenciaRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/meus-tickets': {
-      id: '/_app/meus-tickets'
-      path: '/meus-tickets'
-      fullPath: '/meus-tickets'
-      preLoaderRoute: typeof AppMeusTicketsRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/dashboard': {
@@ -163,11 +163,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppDashboardRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/ticket/$int': {
-      id: '/_app/ticket/$int'
-      path: '/ticket/$int'
-      fullPath: '/ticket/$int'
-      preLoaderRoute: typeof AppTicketIntRouteImport
+    '/_app/ocorrencia/$ro': {
+      id: '/_app/ocorrencia/$ro'
+      path: '/ocorrencia/$ro'
+      fullPath: '/ocorrencia/$ro'
+      preLoaderRoute: typeof AppOcorrenciaRoRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/nps/respostas': {
@@ -189,22 +189,22 @@ declare module '@tanstack/react-router' {
 
 interface AppRouteChildren {
   AppDashboardRoute: typeof AppDashboardRoute
-  AppMeusTicketsRoute: typeof AppMeusTicketsRoute
   AppNovaOcorrenciaRoute: typeof AppNovaOcorrenciaRoute
+  AppOcorrenciasRoute: typeof AppOcorrenciasRoute
   AppTicketsInternosRoute: typeof AppTicketsInternosRoute
   AppGestorKpisRoute: typeof AppGestorKpisRoute
   AppNpsRespostasRoute: typeof AppNpsRespostasRoute
-  AppTicketIntRoute: typeof AppTicketIntRoute
+  AppOcorrenciaRoRoute: typeof AppOcorrenciaRoRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
   AppDashboardRoute: AppDashboardRoute,
-  AppMeusTicketsRoute: AppMeusTicketsRoute,
   AppNovaOcorrenciaRoute: AppNovaOcorrenciaRoute,
+  AppOcorrenciasRoute: AppOcorrenciasRoute,
   AppTicketsInternosRoute: AppTicketsInternosRoute,
   AppGestorKpisRoute: AppGestorKpisRoute,
   AppNpsRespostasRoute: AppNpsRespostasRoute,
-  AppTicketIntRoute: AppTicketIntRoute,
+  AppOcorrenciaRoRoute: AppOcorrenciaRoRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
