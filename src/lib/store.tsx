@@ -1,5 +1,18 @@
 import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
-import type { Ticket, TicketStatus, RootCause, TicketPriority, TicketChannel } from "./types";
+import type {
+  Ticket,
+  TicketStatus,
+  RootCause,
+  TicketPriority,
+  TicketChannel,
+  InternalTicket,
+  InternalDepartment,
+  InternalPriority,
+  InternalTicketStatus,
+  OccurrenceReason,
+  ResponsibleSector,
+  OccurrenceOrigin,
+} from "./types";
 
 const now = () => new Date().toISOString();
 const uid = () => Math.random().toString(36).slice(2, 10);
@@ -121,27 +134,50 @@ const seed: Ticket[] = [
 interface NewTicketInput {
   customer: string;
   customerDoc?: string;
+  city?: string;
+  state?: string;
   part: string;
   partCode: string;
+  quantity?: number;
+  unitValue?: number;
   reason: string;
+  occurrenceReason?: OccurrenceReason;
+  responsibleSector?: ResponsibleSector;
+  origin?: OccurrenceOrigin;
   channel: TicketChannel;
   priority: TicketPriority;
   slaHours: number;
 }
 
+interface NewInternalTicketInput {
+  targetDepartment: InternalDepartment;
+  priority: InternalPriority;
+  subject: string;
+  description: string;
+  linkedOccurrenceId?: string;
+  slaHours: number;
+}
+
 interface StoreCtx {
   tickets: Ticket[];
+  internalTickets: InternalTicket[];
   currentUser: string;
   createTicket: (i: NewTicketInput) => Ticket;
   updateStatus: (id: string, status: TicketStatus) => void;
   resolveTicket: (id: string, data: { rootCause: RootCause; justification: string; report: string }) => void;
   setNps: (id: string, score: number) => void;
+  createInternalTicket: (i: NewInternalTicketInput) => InternalTicket;
+  respondInternalTicket: (id: string, text: string) => void;
+  updateInternalStatus: (id: string, status: InternalTicketStatus, resolutionSummary?: string) => void;
 }
 
 const Ctx = createContext<StoreCtx | null>(null);
 
+const internalSeed: InternalTicket[] = [];
+
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [tickets, setTickets] = useState<Ticket[]>(seed);
+  const [internalTickets, setInternalTickets] = useState<InternalTicket[]>(internalSeed);
   const currentUser = "Maria Souza";
 
   const append = useCallback((id: string, action: string, detail?: string) => {
@@ -211,8 +247,82 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [append],
   );
 
+  const createInternalTicket = useCallback<StoreCtx["createInternalTicket"]>((i) => {
+    const code = `INT-2026-${String(1 + Math.floor(Math.random() * 900)).padStart(4, "0")}`;
+    const it: InternalTicket = {
+      id: uid(),
+      code,
+      openedBy: currentUser,
+      openedAt: now(),
+      ...i,
+      status: "aberto",
+      responses: [],
+    };
+    setInternalTickets((prev) => [it, ...prev]);
+    if (i.linkedOccurrenceId) {
+      setTickets((prev) =>
+        prev.map((t) =>
+          t.id === i.linkedOccurrenceId
+            ? { ...t, internalTicketIds: [...(t.internalTicketIds ?? []), it.id], updatedAt: now() }
+            : t,
+        ),
+      );
+      append(
+        i.linkedOccurrenceId,
+        `Ticket interno aberto: ${code} → ${i.targetDepartment}`,
+        i.subject,
+      );
+    }
+    return it;
+  }, [append]);
+
+  const respondInternalTicket = useCallback<StoreCtx["respondInternalTicket"]>((id, text) => {
+    setInternalTickets((prev) =>
+      prev.map((t) =>
+        t.id === id
+          ? {
+              ...t,
+              status: t.status === "aberto" ? "andamento" : t.status,
+              responses: [...t.responses, { id: uid(), at: now(), responder: currentUser, text }],
+            }
+          : t,
+      ),
+    );
+  }, []);
+
+  const updateInternalStatus = useCallback<StoreCtx["updateInternalStatus"]>(
+    (id, status, resolutionSummary) => {
+      setInternalTickets((prev) =>
+        prev.map((t) =>
+          t.id === id
+            ? {
+                ...t,
+                status,
+                resolutionSummary: resolutionSummary ?? t.resolutionSummary,
+                closedAt: status === "resolvido" ? now() : t.closedAt,
+              }
+            : t,
+        ),
+      );
+    },
+    [],
+  );
+
   return (
-    <Ctx.Provider value={{ tickets, currentUser, createTicket, updateStatus, resolveTicket, setNps }}>
+    <Ctx.Provider
+      value={{
+        tickets,
+        internalTickets,
+        currentUser,
+        createTicket,
+        updateStatus,
+        resolveTicket,
+        setNps,
+        createInternalTicket,
+        respondInternalTicket,
+        updateInternalStatus,
+      }}
+    >
       {children}
     </Ctx.Provider>
   );
