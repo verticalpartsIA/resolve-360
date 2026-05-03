@@ -99,8 +99,12 @@ export function AppLayout() {
 
         {/* Expanded panel */}
         <div className="flex w-60 flex-col bg-[#141416] text-white ring-1 ring-white/5">
-          <div className="flex items-center gap-2 px-5 py-5">
-            <Logo />
+          <div className="flex items-center justify-center px-4 py-4">
+            <img
+              src="https://sfpnjwllcmentoocylow.supabase.co/storage/v1/object/public/avatars/avatars/CINZA%20E%20AMARELO.png"
+              alt="VerticalParts"
+              className="h-12 w-auto object-contain"
+            />
           </div>
           <nav className="flex-1 overflow-y-auto px-3 pb-4">
             {visible.map((g) => (
