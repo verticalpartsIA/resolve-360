@@ -160,6 +160,8 @@ interface NewTicketInput {
   priority: TicketPriority;
   slaHours: number;
   emitente?: string;
+  acaoContencao?: import("./types").ContainmentAction[];
+  whatsappThreadId?: string;
 }
 
 interface NewInternalTicketInput {
