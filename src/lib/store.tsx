@@ -16,6 +16,8 @@ import type {
 
 const now = () => new Date().toISOString();
 const uid = () => Math.random().toString(36).slice(2, 10);
+const hoursBetween = (a: string, b: string) =>
+  Math.max(0, (new Date(b).getTime() - new Date(a).getTime()) / (1000 * 60 * 60));
 
 const seed: Ticket[] = [
   {
