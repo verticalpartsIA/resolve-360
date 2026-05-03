@@ -51,7 +51,11 @@ export function AuthShell({ title, subtitle, children }: { title: string; subtit
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
       <div className="hidden bg-black lg:flex lg:flex-col lg:justify-between lg:p-10">
-        <Logo />
+        <img
+          src="https://sfpnjwllcmentoocylow.supabase.co/storage/v1/object/public/avatars/avatars/CINZA%20E%20AMARELO.png"
+          alt="VerticalParts"
+          className="h-14 w-auto object-contain"
+        />
         <div className="text-white">
           <h2 className="text-3xl font-semibold leading-tight">Pós-venda 360°<br /><span className="text-gold">com rastreabilidade total.</span></h2>
           <p className="mt-3 max-w-sm text-sm text-white/60">FO-OEA-Q-502, NPS, SLA e causa raiz em uma única plataforma para a equipe VerticalParts.</p>
@@ -60,7 +64,13 @@ export function AuthShell({ title, subtitle, children }: { title: string; subtit
       </div>
       <div className="flex items-center justify-center bg-background p-6">
         <div className="w-full max-w-sm">
-          <div className="lg:hidden mb-6"><Logo /></div>
+          <div className="lg:hidden mb-6">
+            <img
+              src="https://sfpnjwllcmentoocylow.supabase.co/storage/v1/object/public/avatars/avatars/CINZA%20E%20AMARELO.png"
+              alt="VerticalParts"
+              className="h-12 w-auto object-contain"
+            />
+          </div>
           <h1 className="text-2xl font-semibold">{title}</h1>
           {subtitle && <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>}
           <div className="mt-6">{children}</div>
