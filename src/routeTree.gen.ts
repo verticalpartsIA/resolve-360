@@ -15,13 +15,32 @@ import { Route as RecoverPasswordRouteImport } from './routes/recover-password'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AppWhatsappThreadsRouteImport } from './routes/_app/whatsapp-threads'
 import { Route as AppTicketsInternosRouteImport } from './routes/_app/tickets-internos'
+import { Route as AppProdutosRouteImport } from './routes/_app/produtos'
 import { Route as AppOcorrenciasRouteImport } from './routes/_app/ocorrencias'
 import { Route as AppNovaOcorrenciaRouteImport } from './routes/_app/nova-ocorrencia'
 import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
+import { Route as AppClientesRouteImport } from './routes/_app/clientes'
+import { Route as AppThreadIdRouteImport } from './routes/_app/thread.$id'
+import { Route as AppProdutoCodigoRouteImport } from './routes/_app/produto.$codigo'
 import { Route as AppOcorrenciaRoRouteImport } from './routes/_app/ocorrencia.$ro'
 import { Route as AppNpsRespostasRouteImport } from './routes/_app/nps/respostas'
+import { Route as AppNpsRelatoriosRouteImport } from './routes/_app/nps/relatorios'
+import { Route as AppNpsDashboardRouteImport } from './routes/_app/nps/dashboard'
+import { Route as AppGestorSlaDepartamentosRouteImport } from './routes/_app/gestor/sla-departamentos'
+import { Route as AppGestorRelatoriosFo504RouteImport } from './routes/_app/gestor/relatorios-fo504'
+import { Route as AppGestorRecorrenciaRouteImport } from './routes/_app/gestor/recorrencia'
 import { Route as AppGestorKpisRouteImport } from './routes/_app/gestor/kpis'
+import { Route as AppGestorCustoNaoQualidadeRouteImport } from './routes/_app/gestor/custo-nao-qualidade'
+import { Route as AppClienteCnpjRouteImport } from './routes/_app/cliente.$cnpj'
+import { Route as AppAdminUsuariosRouteImport } from './routes/_app/admin/usuarios'
+import { Route as AppAdminSlaConfigRouteImport } from './routes/_app/admin/sla-config'
+import { Route as AppAdminIntegracoesRouteImport } from './routes/_app/admin/integracoes'
+import { Route as AppAdminConfiguracoesRouteImport } from './routes/_app/admin/configuracoes'
+import { Route as AppAdminAuditLogRouteImport } from './routes/_app/admin/audit-log'
+import { Route as AppOcorrenciaRoEditarRouteImport } from './routes/_app/ocorrencia.$ro.editar'
+import { Route as AppClienteCnpjHistoricoRouteImport } from './routes/_app/cliente.$cnpj.historico'
 
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
@@ -52,9 +71,19 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppWhatsappThreadsRoute = AppWhatsappThreadsRouteImport.update({
+  id: '/whatsapp-threads',
+  path: '/whatsapp-threads',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppTicketsInternosRoute = AppTicketsInternosRouteImport.update({
   id: '/tickets-internos',
   path: '/tickets-internos',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppProdutosRoute = AppProdutosRouteImport.update({
+  id: '/produtos',
+  path: '/produtos',
   getParentRoute: () => AppRoute,
 } as any)
 const AppOcorrenciasRoute = AppOcorrenciasRouteImport.update({
@@ -72,6 +101,21 @@ const AppDashboardRoute = AppDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AppRoute,
 } as any)
+const AppClientesRoute = AppClientesRouteImport.update({
+  id: '/clientes',
+  path: '/clientes',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppThreadIdRoute = AppThreadIdRouteImport.update({
+  id: '/thread/$id',
+  path: '/thread/$id',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppProdutoCodigoRoute = AppProdutoCodigoRouteImport.update({
+  id: '/produto/$codigo',
+  path: '/produto/$codigo',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppOcorrenciaRoRoute = AppOcorrenciaRoRouteImport.update({
   id: '/ocorrencia/$ro',
   path: '/ocorrencia/$ro',
@@ -82,10 +126,83 @@ const AppNpsRespostasRoute = AppNpsRespostasRouteImport.update({
   path: '/nps/respostas',
   getParentRoute: () => AppRoute,
 } as any)
+const AppNpsRelatoriosRoute = AppNpsRelatoriosRouteImport.update({
+  id: '/nps/relatorios',
+  path: '/nps/relatorios',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppNpsDashboardRoute = AppNpsDashboardRouteImport.update({
+  id: '/nps/dashboard',
+  path: '/nps/dashboard',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppGestorSlaDepartamentosRoute =
+  AppGestorSlaDepartamentosRouteImport.update({
+    id: '/gestor/sla-departamentos',
+    path: '/gestor/sla-departamentos',
+    getParentRoute: () => AppRoute,
+  } as any)
+const AppGestorRelatoriosFo504Route =
+  AppGestorRelatoriosFo504RouteImport.update({
+    id: '/gestor/relatorios-fo504',
+    path: '/gestor/relatorios-fo504',
+    getParentRoute: () => AppRoute,
+  } as any)
+const AppGestorRecorrenciaRoute = AppGestorRecorrenciaRouteImport.update({
+  id: '/gestor/recorrencia',
+  path: '/gestor/recorrencia',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppGestorKpisRoute = AppGestorKpisRouteImport.update({
   id: '/gestor/kpis',
   path: '/gestor/kpis',
   getParentRoute: () => AppRoute,
+} as any)
+const AppGestorCustoNaoQualidadeRoute =
+  AppGestorCustoNaoQualidadeRouteImport.update({
+    id: '/gestor/custo-nao-qualidade',
+    path: '/gestor/custo-nao-qualidade',
+    getParentRoute: () => AppRoute,
+  } as any)
+const AppClienteCnpjRoute = AppClienteCnpjRouteImport.update({
+  id: '/cliente/$cnpj',
+  path: '/cliente/$cnpj',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAdminUsuariosRoute = AppAdminUsuariosRouteImport.update({
+  id: '/admin/usuarios',
+  path: '/admin/usuarios',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAdminSlaConfigRoute = AppAdminSlaConfigRouteImport.update({
+  id: '/admin/sla-config',
+  path: '/admin/sla-config',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAdminIntegracoesRoute = AppAdminIntegracoesRouteImport.update({
+  id: '/admin/integracoes',
+  path: '/admin/integracoes',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAdminConfiguracoesRoute = AppAdminConfiguracoesRouteImport.update({
+  id: '/admin/configuracoes',
+  path: '/admin/configuracoes',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAdminAuditLogRoute = AppAdminAuditLogRouteImport.update({
+  id: '/admin/audit-log',
+  path: '/admin/audit-log',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppOcorrenciaRoEditarRoute = AppOcorrenciaRoEditarRouteImport.update({
+  id: '/editar',
+  path: '/editar',
+  getParentRoute: () => AppOcorrenciaRoRoute,
+} as any)
+const AppClienteCnpjHistoricoRoute = AppClienteCnpjHistoricoRouteImport.update({
+  id: '/historico',
+  path: '/historico',
+  getParentRoute: () => AppClienteCnpjRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -94,13 +211,32 @@ export interface FileRoutesByFullPath {
   '/recover-password': typeof RecoverPasswordRoute
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/clientes': typeof AppClientesRoute
   '/dashboard': typeof AppDashboardRoute
   '/nova-ocorrencia': typeof AppNovaOcorrenciaRoute
   '/ocorrencias': typeof AppOcorrenciasRoute
+  '/produtos': typeof AppProdutosRoute
   '/tickets-internos': typeof AppTicketsInternosRoute
+  '/whatsapp-threads': typeof AppWhatsappThreadsRoute
+  '/admin/audit-log': typeof AppAdminAuditLogRoute
+  '/admin/configuracoes': typeof AppAdminConfiguracoesRoute
+  '/admin/integracoes': typeof AppAdminIntegracoesRoute
+  '/admin/sla-config': typeof AppAdminSlaConfigRoute
+  '/admin/usuarios': typeof AppAdminUsuariosRoute
+  '/cliente/$cnpj': typeof AppClienteCnpjRouteWithChildren
+  '/gestor/custo-nao-qualidade': typeof AppGestorCustoNaoQualidadeRoute
   '/gestor/kpis': typeof AppGestorKpisRoute
+  '/gestor/recorrencia': typeof AppGestorRecorrenciaRoute
+  '/gestor/relatorios-fo504': typeof AppGestorRelatoriosFo504Route
+  '/gestor/sla-departamentos': typeof AppGestorSlaDepartamentosRoute
+  '/nps/dashboard': typeof AppNpsDashboardRoute
+  '/nps/relatorios': typeof AppNpsRelatoriosRoute
   '/nps/respostas': typeof AppNpsRespostasRoute
-  '/ocorrencia/$ro': typeof AppOcorrenciaRoRoute
+  '/ocorrencia/$ro': typeof AppOcorrenciaRoRouteWithChildren
+  '/produto/$codigo': typeof AppProdutoCodigoRoute
+  '/thread/$id': typeof AppThreadIdRoute
+  '/cliente/$cnpj/historico': typeof AppClienteCnpjHistoricoRoute
+  '/ocorrencia/$ro/editar': typeof AppOcorrenciaRoEditarRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -108,13 +244,32 @@ export interface FileRoutesByTo {
   '/recover-password': typeof RecoverPasswordRoute
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/clientes': typeof AppClientesRoute
   '/dashboard': typeof AppDashboardRoute
   '/nova-ocorrencia': typeof AppNovaOcorrenciaRoute
   '/ocorrencias': typeof AppOcorrenciasRoute
+  '/produtos': typeof AppProdutosRoute
   '/tickets-internos': typeof AppTicketsInternosRoute
+  '/whatsapp-threads': typeof AppWhatsappThreadsRoute
+  '/admin/audit-log': typeof AppAdminAuditLogRoute
+  '/admin/configuracoes': typeof AppAdminConfiguracoesRoute
+  '/admin/integracoes': typeof AppAdminIntegracoesRoute
+  '/admin/sla-config': typeof AppAdminSlaConfigRoute
+  '/admin/usuarios': typeof AppAdminUsuariosRoute
+  '/cliente/$cnpj': typeof AppClienteCnpjRouteWithChildren
+  '/gestor/custo-nao-qualidade': typeof AppGestorCustoNaoQualidadeRoute
   '/gestor/kpis': typeof AppGestorKpisRoute
+  '/gestor/recorrencia': typeof AppGestorRecorrenciaRoute
+  '/gestor/relatorios-fo504': typeof AppGestorRelatoriosFo504Route
+  '/gestor/sla-departamentos': typeof AppGestorSlaDepartamentosRoute
+  '/nps/dashboard': typeof AppNpsDashboardRoute
+  '/nps/relatorios': typeof AppNpsRelatoriosRoute
   '/nps/respostas': typeof AppNpsRespostasRoute
-  '/ocorrencia/$ro': typeof AppOcorrenciaRoRoute
+  '/ocorrencia/$ro': typeof AppOcorrenciaRoRouteWithChildren
+  '/produto/$codigo': typeof AppProdutoCodigoRoute
+  '/thread/$id': typeof AppThreadIdRoute
+  '/cliente/$cnpj/historico': typeof AppClienteCnpjHistoricoRoute
+  '/ocorrencia/$ro/editar': typeof AppOcorrenciaRoEditarRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -124,13 +279,32 @@ export interface FileRoutesById {
   '/recover-password': typeof RecoverPasswordRoute
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/_app/clientes': typeof AppClientesRoute
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/nova-ocorrencia': typeof AppNovaOcorrenciaRoute
   '/_app/ocorrencias': typeof AppOcorrenciasRoute
+  '/_app/produtos': typeof AppProdutosRoute
   '/_app/tickets-internos': typeof AppTicketsInternosRoute
+  '/_app/whatsapp-threads': typeof AppWhatsappThreadsRoute
+  '/_app/admin/audit-log': typeof AppAdminAuditLogRoute
+  '/_app/admin/configuracoes': typeof AppAdminConfiguracoesRoute
+  '/_app/admin/integracoes': typeof AppAdminIntegracoesRoute
+  '/_app/admin/sla-config': typeof AppAdminSlaConfigRoute
+  '/_app/admin/usuarios': typeof AppAdminUsuariosRoute
+  '/_app/cliente/$cnpj': typeof AppClienteCnpjRouteWithChildren
+  '/_app/gestor/custo-nao-qualidade': typeof AppGestorCustoNaoQualidadeRoute
   '/_app/gestor/kpis': typeof AppGestorKpisRoute
+  '/_app/gestor/recorrencia': typeof AppGestorRecorrenciaRoute
+  '/_app/gestor/relatorios-fo504': typeof AppGestorRelatoriosFo504Route
+  '/_app/gestor/sla-departamentos': typeof AppGestorSlaDepartamentosRoute
+  '/_app/nps/dashboard': typeof AppNpsDashboardRoute
+  '/_app/nps/relatorios': typeof AppNpsRelatoriosRoute
   '/_app/nps/respostas': typeof AppNpsRespostasRoute
-  '/_app/ocorrencia/$ro': typeof AppOcorrenciaRoRoute
+  '/_app/ocorrencia/$ro': typeof AppOcorrenciaRoRouteWithChildren
+  '/_app/produto/$codigo': typeof AppProdutoCodigoRoute
+  '/_app/thread/$id': typeof AppThreadIdRoute
+  '/_app/cliente/$cnpj/historico': typeof AppClienteCnpjHistoricoRoute
+  '/_app/ocorrencia/$ro/editar': typeof AppOcorrenciaRoEditarRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -140,13 +314,32 @@ export interface FileRouteTypes {
     | '/recover-password'
     | '/register'
     | '/reset-password'
+    | '/clientes'
     | '/dashboard'
     | '/nova-ocorrencia'
     | '/ocorrencias'
+    | '/produtos'
     | '/tickets-internos'
+    | '/whatsapp-threads'
+    | '/admin/audit-log'
+    | '/admin/configuracoes'
+    | '/admin/integracoes'
+    | '/admin/sla-config'
+    | '/admin/usuarios'
+    | '/cliente/$cnpj'
+    | '/gestor/custo-nao-qualidade'
     | '/gestor/kpis'
+    | '/gestor/recorrencia'
+    | '/gestor/relatorios-fo504'
+    | '/gestor/sla-departamentos'
+    | '/nps/dashboard'
+    | '/nps/relatorios'
     | '/nps/respostas'
     | '/ocorrencia/$ro'
+    | '/produto/$codigo'
+    | '/thread/$id'
+    | '/cliente/$cnpj/historico'
+    | '/ocorrencia/$ro/editar'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -154,13 +347,32 @@ export interface FileRouteTypes {
     | '/recover-password'
     | '/register'
     | '/reset-password'
+    | '/clientes'
     | '/dashboard'
     | '/nova-ocorrencia'
     | '/ocorrencias'
+    | '/produtos'
     | '/tickets-internos'
+    | '/whatsapp-threads'
+    | '/admin/audit-log'
+    | '/admin/configuracoes'
+    | '/admin/integracoes'
+    | '/admin/sla-config'
+    | '/admin/usuarios'
+    | '/cliente/$cnpj'
+    | '/gestor/custo-nao-qualidade'
     | '/gestor/kpis'
+    | '/gestor/recorrencia'
+    | '/gestor/relatorios-fo504'
+    | '/gestor/sla-departamentos'
+    | '/nps/dashboard'
+    | '/nps/relatorios'
     | '/nps/respostas'
     | '/ocorrencia/$ro'
+    | '/produto/$codigo'
+    | '/thread/$id'
+    | '/cliente/$cnpj/historico'
+    | '/ocorrencia/$ro/editar'
   id:
     | '__root__'
     | '/'
@@ -169,13 +381,32 @@ export interface FileRouteTypes {
     | '/recover-password'
     | '/register'
     | '/reset-password'
+    | '/_app/clientes'
     | '/_app/dashboard'
     | '/_app/nova-ocorrencia'
     | '/_app/ocorrencias'
+    | '/_app/produtos'
     | '/_app/tickets-internos'
+    | '/_app/whatsapp-threads'
+    | '/_app/admin/audit-log'
+    | '/_app/admin/configuracoes'
+    | '/_app/admin/integracoes'
+    | '/_app/admin/sla-config'
+    | '/_app/admin/usuarios'
+    | '/_app/cliente/$cnpj'
+    | '/_app/gestor/custo-nao-qualidade'
     | '/_app/gestor/kpis'
+    | '/_app/gestor/recorrencia'
+    | '/_app/gestor/relatorios-fo504'
+    | '/_app/gestor/sla-departamentos'
+    | '/_app/nps/dashboard'
+    | '/_app/nps/relatorios'
     | '/_app/nps/respostas'
     | '/_app/ocorrencia/$ro'
+    | '/_app/produto/$codigo'
+    | '/_app/thread/$id'
+    | '/_app/cliente/$cnpj/historico'
+    | '/_app/ocorrencia/$ro/editar'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -231,11 +462,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_app/whatsapp-threads': {
+      id: '/_app/whatsapp-threads'
+      path: '/whatsapp-threads'
+      fullPath: '/whatsapp-threads'
+      preLoaderRoute: typeof AppWhatsappThreadsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/tickets-internos': {
       id: '/_app/tickets-internos'
       path: '/tickets-internos'
       fullPath: '/tickets-internos'
       preLoaderRoute: typeof AppTicketsInternosRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/produtos': {
+      id: '/_app/produtos'
+      path: '/produtos'
+      fullPath: '/produtos'
+      preLoaderRoute: typeof AppProdutosRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/ocorrencias': {
@@ -259,6 +504,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppDashboardRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/clientes': {
+      id: '/_app/clientes'
+      path: '/clientes'
+      fullPath: '/clientes'
+      preLoaderRoute: typeof AppClientesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/thread/$id': {
+      id: '/_app/thread/$id'
+      path: '/thread/$id'
+      fullPath: '/thread/$id'
+      preLoaderRoute: typeof AppThreadIdRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/produto/$codigo': {
+      id: '/_app/produto/$codigo'
+      path: '/produto/$codigo'
+      fullPath: '/produto/$codigo'
+      preLoaderRoute: typeof AppProdutoCodigoRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/ocorrencia/$ro': {
       id: '/_app/ocorrencia/$ro'
       path: '/ocorrencia/$ro'
@@ -273,6 +539,41 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppNpsRespostasRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/nps/relatorios': {
+      id: '/_app/nps/relatorios'
+      path: '/nps/relatorios'
+      fullPath: '/nps/relatorios'
+      preLoaderRoute: typeof AppNpsRelatoriosRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/nps/dashboard': {
+      id: '/_app/nps/dashboard'
+      path: '/nps/dashboard'
+      fullPath: '/nps/dashboard'
+      preLoaderRoute: typeof AppNpsDashboardRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/gestor/sla-departamentos': {
+      id: '/_app/gestor/sla-departamentos'
+      path: '/gestor/sla-departamentos'
+      fullPath: '/gestor/sla-departamentos'
+      preLoaderRoute: typeof AppGestorSlaDepartamentosRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/gestor/relatorios-fo504': {
+      id: '/_app/gestor/relatorios-fo504'
+      path: '/gestor/relatorios-fo504'
+      fullPath: '/gestor/relatorios-fo504'
+      preLoaderRoute: typeof AppGestorRelatoriosFo504RouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/gestor/recorrencia': {
+      id: '/_app/gestor/recorrencia'
+      path: '/gestor/recorrencia'
+      fullPath: '/gestor/recorrencia'
+      preLoaderRoute: typeof AppGestorRecorrenciaRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/gestor/kpis': {
       id: '/_app/gestor/kpis'
       path: '/gestor/kpis'
@@ -280,27 +581,148 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppGestorKpisRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/gestor/custo-nao-qualidade': {
+      id: '/_app/gestor/custo-nao-qualidade'
+      path: '/gestor/custo-nao-qualidade'
+      fullPath: '/gestor/custo-nao-qualidade'
+      preLoaderRoute: typeof AppGestorCustoNaoQualidadeRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/cliente/$cnpj': {
+      id: '/_app/cliente/$cnpj'
+      path: '/cliente/$cnpj'
+      fullPath: '/cliente/$cnpj'
+      preLoaderRoute: typeof AppClienteCnpjRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/admin/usuarios': {
+      id: '/_app/admin/usuarios'
+      path: '/admin/usuarios'
+      fullPath: '/admin/usuarios'
+      preLoaderRoute: typeof AppAdminUsuariosRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/admin/sla-config': {
+      id: '/_app/admin/sla-config'
+      path: '/admin/sla-config'
+      fullPath: '/admin/sla-config'
+      preLoaderRoute: typeof AppAdminSlaConfigRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/admin/integracoes': {
+      id: '/_app/admin/integracoes'
+      path: '/admin/integracoes'
+      fullPath: '/admin/integracoes'
+      preLoaderRoute: typeof AppAdminIntegracoesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/admin/configuracoes': {
+      id: '/_app/admin/configuracoes'
+      path: '/admin/configuracoes'
+      fullPath: '/admin/configuracoes'
+      preLoaderRoute: typeof AppAdminConfiguracoesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/admin/audit-log': {
+      id: '/_app/admin/audit-log'
+      path: '/admin/audit-log'
+      fullPath: '/admin/audit-log'
+      preLoaderRoute: typeof AppAdminAuditLogRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/ocorrencia/$ro/editar': {
+      id: '/_app/ocorrencia/$ro/editar'
+      path: '/editar'
+      fullPath: '/ocorrencia/$ro/editar'
+      preLoaderRoute: typeof AppOcorrenciaRoEditarRouteImport
+      parentRoute: typeof AppOcorrenciaRoRoute
+    }
+    '/_app/cliente/$cnpj/historico': {
+      id: '/_app/cliente/$cnpj/historico'
+      path: '/historico'
+      fullPath: '/cliente/$cnpj/historico'
+      preLoaderRoute: typeof AppClienteCnpjHistoricoRouteImport
+      parentRoute: typeof AppClienteCnpjRoute
+    }
   }
 }
 
+interface AppClienteCnpjRouteChildren {
+  AppClienteCnpjHistoricoRoute: typeof AppClienteCnpjHistoricoRoute
+}
+
+const AppClienteCnpjRouteChildren: AppClienteCnpjRouteChildren = {
+  AppClienteCnpjHistoricoRoute: AppClienteCnpjHistoricoRoute,
+}
+
+const AppClienteCnpjRouteWithChildren = AppClienteCnpjRoute._addFileChildren(
+  AppClienteCnpjRouteChildren,
+)
+
+interface AppOcorrenciaRoRouteChildren {
+  AppOcorrenciaRoEditarRoute: typeof AppOcorrenciaRoEditarRoute
+}
+
+const AppOcorrenciaRoRouteChildren: AppOcorrenciaRoRouteChildren = {
+  AppOcorrenciaRoEditarRoute: AppOcorrenciaRoEditarRoute,
+}
+
+const AppOcorrenciaRoRouteWithChildren = AppOcorrenciaRoRoute._addFileChildren(
+  AppOcorrenciaRoRouteChildren,
+)
+
 interface AppRouteChildren {
+  AppClientesRoute: typeof AppClientesRoute
   AppDashboardRoute: typeof AppDashboardRoute
   AppNovaOcorrenciaRoute: typeof AppNovaOcorrenciaRoute
   AppOcorrenciasRoute: typeof AppOcorrenciasRoute
+  AppProdutosRoute: typeof AppProdutosRoute
   AppTicketsInternosRoute: typeof AppTicketsInternosRoute
+  AppWhatsappThreadsRoute: typeof AppWhatsappThreadsRoute
+  AppAdminAuditLogRoute: typeof AppAdminAuditLogRoute
+  AppAdminConfiguracoesRoute: typeof AppAdminConfiguracoesRoute
+  AppAdminIntegracoesRoute: typeof AppAdminIntegracoesRoute
+  AppAdminSlaConfigRoute: typeof AppAdminSlaConfigRoute
+  AppAdminUsuariosRoute: typeof AppAdminUsuariosRoute
+  AppClienteCnpjRoute: typeof AppClienteCnpjRouteWithChildren
+  AppGestorCustoNaoQualidadeRoute: typeof AppGestorCustoNaoQualidadeRoute
   AppGestorKpisRoute: typeof AppGestorKpisRoute
+  AppGestorRecorrenciaRoute: typeof AppGestorRecorrenciaRoute
+  AppGestorRelatoriosFo504Route: typeof AppGestorRelatoriosFo504Route
+  AppGestorSlaDepartamentosRoute: typeof AppGestorSlaDepartamentosRoute
+  AppNpsDashboardRoute: typeof AppNpsDashboardRoute
+  AppNpsRelatoriosRoute: typeof AppNpsRelatoriosRoute
   AppNpsRespostasRoute: typeof AppNpsRespostasRoute
-  AppOcorrenciaRoRoute: typeof AppOcorrenciaRoRoute
+  AppOcorrenciaRoRoute: typeof AppOcorrenciaRoRouteWithChildren
+  AppProdutoCodigoRoute: typeof AppProdutoCodigoRoute
+  AppThreadIdRoute: typeof AppThreadIdRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppClientesRoute: AppClientesRoute,
   AppDashboardRoute: AppDashboardRoute,
   AppNovaOcorrenciaRoute: AppNovaOcorrenciaRoute,
   AppOcorrenciasRoute: AppOcorrenciasRoute,
+  AppProdutosRoute: AppProdutosRoute,
   AppTicketsInternosRoute: AppTicketsInternosRoute,
+  AppWhatsappThreadsRoute: AppWhatsappThreadsRoute,
+  AppAdminAuditLogRoute: AppAdminAuditLogRoute,
+  AppAdminConfiguracoesRoute: AppAdminConfiguracoesRoute,
+  AppAdminIntegracoesRoute: AppAdminIntegracoesRoute,
+  AppAdminSlaConfigRoute: AppAdminSlaConfigRoute,
+  AppAdminUsuariosRoute: AppAdminUsuariosRoute,
+  AppClienteCnpjRoute: AppClienteCnpjRouteWithChildren,
+  AppGestorCustoNaoQualidadeRoute: AppGestorCustoNaoQualidadeRoute,
   AppGestorKpisRoute: AppGestorKpisRoute,
+  AppGestorRecorrenciaRoute: AppGestorRecorrenciaRoute,
+  AppGestorRelatoriosFo504Route: AppGestorRelatoriosFo504Route,
+  AppGestorSlaDepartamentosRoute: AppGestorSlaDepartamentosRoute,
+  AppNpsDashboardRoute: AppNpsDashboardRoute,
+  AppNpsRelatoriosRoute: AppNpsRelatoriosRoute,
   AppNpsRespostasRoute: AppNpsRespostasRoute,
-  AppOcorrenciaRoRoute: AppOcorrenciaRoRoute,
+  AppOcorrenciaRoRoute: AppOcorrenciaRoRouteWithChildren,
+  AppProdutoCodigoRoute: AppProdutoCodigoRoute,
+  AppThreadIdRoute: AppThreadIdRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
