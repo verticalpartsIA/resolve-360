@@ -190,6 +190,7 @@ interface StoreCtx {
   respondInternalTicket: (id: string, text: string) => void;
   updateInternalStatus: (id: string, status: InternalTicketStatus, resolutionSummary?: string) => void;
   submitNpsSurvey: (i: NewNpsInput) => NpsRecord;
+  updateQualidade: (id: string, data: QualidadeInput) => void;
 }
 
 interface NewNpsInput {
@@ -201,6 +202,15 @@ interface NewNpsInput {
   q3Agilidade: number;
   feedback?: string;
   trigger: NpsTrigger;
+}
+
+interface QualidadeInput {
+  descricaoNaoConformidade?: string;
+  acaoContencao?: import("./types").ContainmentAction[];
+  analiseQualidade?: string;
+  classificacaoQualidade?: string;
+  custoNaoQualidade?: number;
+  observacoesQualidade?: string;
 }
 
 const Ctx = createContext<StoreCtx | null>(null);
@@ -429,6 +439,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return rec;
   }, [append]);
 
+  const updateQualidade = useCallback<StoreCtx["updateQualidade"]>((id, data) => {
+    setTickets((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, ...data, updatedAt: now() } : t)),
+    );
+    append(id, "Campos de Qualidade FO-504 atualizados", data.classificacaoQualidade);
+  }, [append]);
+
   return (
     <Ctx.Provider
       value={{
@@ -444,6 +461,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         respondInternalTicket,
         updateInternalStatus,
         submitNpsSurvey,
+        updateQualidade,
       }}
     >
       {children}
