@@ -38,6 +38,8 @@ export const OCCURRENCE_REASON_LABEL: Record<OccurrenceReason, string> = {
   menor_quantidade: "Material enviado em menor quantidade",
   destinatario_errado: "Destinatário errado",
   troca_material: "Troca de material",
+  atraso_entrega: "Atraso na entrega",
+  outros: "Outros",
 };
 
 export type ResolutionStatus = "autorizado" | "recusado" | "em_analise";
