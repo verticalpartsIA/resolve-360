@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState, useEffect } from "react";
 import { useStore, slaStatus } from "@/lib/store";
+import { BackToDashboard } from "@/components/app/BackToDashboard";
 import {
   ROOT_CAUSE_LABEL,
   INTERNAL_DEPT_LABEL,
@@ -179,6 +180,7 @@ function ManagerDashboard() {
 
   return (
     <div className="space-y-6">
+      <BackToDashboard />
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="text-xs font-medium uppercase tracking-[0.18em] text-gold">Gestor</p>
