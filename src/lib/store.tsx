@@ -16,6 +16,8 @@ import type {
 
 const now = () => new Date().toISOString();
 const uid = () => Math.random().toString(36).slice(2, 10);
+const hoursBetween = (a: string, b: string) =>
+  Math.max(0, (new Date(b).getTime() - new Date(a).getTime()) / (1000 * 60 * 60));
 
 const seed: Ticket[] = [
   {
@@ -162,6 +164,7 @@ interface NewInternalTicketInput {
   subject: string;
   description: string;
   linkedOccurrenceId?: string;
+  linkedCustomer?: string;
   slaHours: number;
 }
 
@@ -265,7 +268,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   );
 
   const createInternalTicket = useCallback<StoreCtx["createInternalTicket"]>((i) => {
-    const code = `INT-2026-${String(1 + Math.floor(Math.random() * 900)).padStart(4, "0")}`;
+    const year = new Date().getFullYear();
+    const code = `INT-${year}-${String(1 + Math.floor(Math.random() * 900)).padStart(3, "0")}`;
     const it: InternalTicket = {
       id: uid(),
       code,
@@ -300,7 +304,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           ? {
               ...t,
               status: t.status === "aberto" ? "andamento" : t.status,
-              responses: [...t.responses, { id: uid(), at: now(), responder: currentUser, text }],
+              responses: [
+                ...t.responses,
+                {
+                  id: uid(),
+                  at: now(),
+                  responder: currentUser,
+                  text,
+                  responseHours: hoursBetween(
+                    t.responses.length ? t.responses[t.responses.length - 1].at : t.openedAt,
+                    now(),
+                  ),
+                },
+              ],
             }
           : t,
       ),
@@ -317,6 +333,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
                 status,
                 resolutionSummary: resolutionSummary ?? t.resolutionSummary,
                 closedAt: status === "resolvido" ? now() : t.closedAt,
+                slaCumprido:
+                  status === "resolvido"
+                    ? hoursBetween(t.openedAt, now()) <= t.slaHours
+                    : t.slaCumprido,
               }
             : t,
         ),

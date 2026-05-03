@@ -118,6 +118,8 @@ export interface InternalResponse {
   at: string;
   responder: string;
   text: string;
+  attachments?: Attachment[];
+  responseHours?: number; // tempo entre abertura/última resposta e esta resposta
 }
 
 export interface InternalTicket {
@@ -130,12 +132,24 @@ export interface InternalTicket {
   subject: string;
   description: string;
   linkedOccurrenceId?: string;
+  linkedCustomer?: string;
   slaHours: number;
   status: InternalTicketStatus;
   responses: InternalResponse[];
   resolutionSummary?: string;
   closedAt?: string;
+  slaCumprido?: boolean;
 }
+
+// SLA padrão por departamento (horas)
+export const INTERNAL_DEFAULT_SLA: Record<InternalDepartment, number> = {
+  comercial: 8,
+  expedicao: 4,
+  engenharia: 24,
+  producao: 12,
+  compras: 24,
+  qualidade: 16,
+};
 
 export interface AuditLog {
   id: string;
