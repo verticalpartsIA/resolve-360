@@ -41,7 +41,6 @@ import { Route as AppAdminSlaConfigRouteImport } from './routes/_app/admin/sla-c
 import { Route as AppAdminIntegracoesRouteImport } from './routes/_app/admin/integracoes'
 import { Route as AppAdminConfiguracoesRouteImport } from './routes/_app/admin/configuracoes'
 import { Route as AppAdminAuditLogRouteImport } from './routes/_app/admin/audit-log'
-import { Route as AppOcorrenciaRouteImport } from './routes/_app/ocorrencia.'
 import { Route as AppOcorrenciaRoEditarRouteImport } from './routes/_app/ocorrencia.$ro.editar'
 import { Route as AppClienteCnpjHistoricoRouteImport } from './routes/_app/cliente.$cnpj.historico'
 
@@ -207,11 +206,6 @@ const AppAdminAuditLogRoute = AppAdminAuditLogRouteImport.update({
   path: '/admin/audit-log',
   getParentRoute: () => AppRoute,
 } as any)
-const AppOcorrenciaRoute = AppOcorrenciaRouteImport.update({
-  id: '/ocorrencia/',
-  path: '/ocorrencia/',
-  getParentRoute: () => AppRoute,
-} as any)
 const AppOcorrenciaRoEditarRoute = AppOcorrenciaRoEditarRouteImport.update({
   id: '/editar',
   path: '/editar',
@@ -237,7 +231,6 @@ export interface FileRoutesByFullPath {
   '/produtos': typeof AppProdutosRoute
   '/tickets-internos': typeof AppTicketsInternosRoute
   '/whatsapp-threads': typeof AppWhatsappThreadsRoute
-  '/ocorrencia/': typeof AppOcorrenciaRoute
   '/admin/audit-log': typeof AppAdminAuditLogRoute
   '/admin/configuracoes': typeof AppAdminConfiguracoesRoute
   '/admin/integracoes': typeof AppAdminIntegracoesRoute
@@ -273,7 +266,6 @@ export interface FileRoutesByTo {
   '/produtos': typeof AppProdutosRoute
   '/tickets-internos': typeof AppTicketsInternosRoute
   '/whatsapp-threads': typeof AppWhatsappThreadsRoute
-  '/ocorrencia': typeof AppOcorrenciaRoute
   '/admin/audit-log': typeof AppAdminAuditLogRoute
   '/admin/configuracoes': typeof AppAdminConfiguracoesRoute
   '/admin/integracoes': typeof AppAdminIntegracoesRoute
@@ -311,7 +303,6 @@ export interface FileRoutesById {
   '/_app/produtos': typeof AppProdutosRoute
   '/_app/tickets-internos': typeof AppTicketsInternosRoute
   '/_app/whatsapp-threads': typeof AppWhatsappThreadsRoute
-  '/_app/ocorrencia/': typeof AppOcorrenciaRoute
   '/_app/admin/audit-log': typeof AppAdminAuditLogRoute
   '/_app/admin/configuracoes': typeof AppAdminConfiguracoesRoute
   '/_app/admin/integracoes': typeof AppAdminIntegracoesRoute
@@ -349,7 +340,6 @@ export interface FileRouteTypes {
     | '/produtos'
     | '/tickets-internos'
     | '/whatsapp-threads'
-    | '/ocorrencia/'
     | '/admin/audit-log'
     | '/admin/configuracoes'
     | '/admin/integracoes'
@@ -385,7 +375,6 @@ export interface FileRouteTypes {
     | '/produtos'
     | '/tickets-internos'
     | '/whatsapp-threads'
-    | '/ocorrencia'
     | '/admin/audit-log'
     | '/admin/configuracoes'
     | '/admin/integracoes'
@@ -422,7 +411,6 @@ export interface FileRouteTypes {
     | '/_app/produtos'
     | '/_app/tickets-internos'
     | '/_app/whatsapp-threads'
-    | '/_app/ocorrencia/'
     | '/_app/admin/audit-log'
     | '/_app/admin/configuracoes'
     | '/_app/admin/integracoes'
@@ -681,13 +669,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAdminAuditLogRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/ocorrencia/': {
-      id: '/_app/ocorrencia/'
-      path: '/ocorrencia'
-      fullPath: '/ocorrencia/'
-      preLoaderRoute: typeof AppOcorrenciaRouteImport
-      parentRoute: typeof AppRoute
-    }
     '/_app/ocorrencia/$ro/editar': {
       id: '/_app/ocorrencia/$ro/editar'
       path: '/editar'
@@ -738,7 +719,6 @@ interface AppRouteChildren {
   AppProdutosRoute: typeof AppProdutosRoute
   AppTicketsInternosRoute: typeof AppTicketsInternosRoute
   AppWhatsappThreadsRoute: typeof AppWhatsappThreadsRoute
-  AppOcorrenciaRoute: typeof AppOcorrenciaRoute
   AppAdminAuditLogRoute: typeof AppAdminAuditLogRoute
   AppAdminConfiguracoesRoute: typeof AppAdminConfiguracoesRoute
   AppAdminIntegracoesRoute: typeof AppAdminIntegracoesRoute
@@ -767,7 +747,6 @@ const AppRouteChildren: AppRouteChildren = {
   AppProdutosRoute: AppProdutosRoute,
   AppTicketsInternosRoute: AppTicketsInternosRoute,
   AppWhatsappThreadsRoute: AppWhatsappThreadsRoute,
-  AppOcorrenciaRoute: AppOcorrenciaRoute,
   AppAdminAuditLogRoute: AppAdminAuditLogRoute,
   AppAdminConfiguracoesRoute: AppAdminConfiguracoesRoute,
   AppAdminIntegracoesRoute: AppAdminIntegracoesRoute,
