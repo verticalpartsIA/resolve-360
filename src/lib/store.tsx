@@ -159,6 +159,7 @@ interface NewTicketInput {
   occurrenceReason?: OccurrenceReason;
   responsibleSector?: ResponsibleSector;
   origin?: OccurrenceOrigin;
+  resolutionStatus?: import("./types").ResolutionStatus;
   channel: TicketChannel;
   priority: TicketPriority;
   slaHours: number;
