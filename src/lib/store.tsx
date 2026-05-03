@@ -12,7 +12,11 @@ import type {
   OccurrenceReason,
   ResponsibleSector,
   OccurrenceOrigin,
+  NpsRecord,
+  NpsTrigger,
+  CustomerTier,
 } from "./types";
+import { categorizeNps } from "./types";
 
 const now = () => new Date().toISOString();
 const uid = () => Math.random().toString(36).slice(2, 10);
@@ -171,6 +175,7 @@ interface NewInternalTicketInput {
 interface StoreCtx {
   tickets: Ticket[];
   internalTickets: InternalTicket[];
+  npsRecords: NpsRecord[];
   currentUser: string;
   createTicket: (i: NewTicketInput) => Ticket;
   updateStatus: (id: string, status: TicketStatus) => void;
@@ -179,6 +184,18 @@ interface StoreCtx {
   createInternalTicket: (i: NewInternalTicketInput) => InternalTicket;
   respondInternalTicket: (id: string, text: string) => void;
   updateInternalStatus: (id: string, status: InternalTicketStatus, resolutionSummary?: string) => void;
+  submitNpsSurvey: (i: NewNpsInput) => NpsRecord;
+}
+
+interface NewNpsInput {
+  customer: string;
+  customerTier: CustomerTier;
+  occurrenceId?: string;
+  q1Recomendacao: number;
+  q2Resolucao: number;
+  q3Agilidade: number;
+  feedback?: string;
+  trigger: NpsTrigger;
 }
 
 const Ctx = createContext<StoreCtx | null>(null);
@@ -188,6 +205,7 @@ const internalSeed: InternalTicket[] = [];
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [tickets, setTickets] = useState<Ticket[]>(seed);
   const [internalTickets, setInternalTickets] = useState<InternalTicket[]>(internalSeed);
+  const [npsRecords, setNpsRecords] = useState<NpsRecord[]>([]);
   const currentUser = "Maria Souza";
 
   const append = useCallback((id: string, action: string, detail?: string) => {
@@ -345,11 +363,73 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [],
   );
 
+  const submitNpsSurvey = useCallback<StoreCtx["submitNpsSurvey"]>((i) => {
+    const category = categorizeNps(i.q1Recomendacao);
+    const rec: NpsRecord = {
+      id: uid(),
+      ...i,
+      category,
+      surveyDate: now(),
+      createdAt: now(),
+    };
+    setNpsRecords((prev) => [rec, ...prev]);
+
+    // Reflete no ticket vinculado
+    if (i.occurrenceId) {
+      setTickets((prev) =>
+        prev.map((t) =>
+          t.id === i.occurrenceId
+            ? { ...t, nps: i.q1Recomendacao, npsSentAt: now() }
+            : t,
+        ),
+      );
+      append(i.occurrenceId, `NPS recebido: ${i.q1Recomendacao} (${category})`, i.feedback);
+    }
+
+    // Regra: NPS ≤ 6 → ticket interno automático para Qualidade
+    if (i.q1Recomendacao <= 6) {
+      const year = new Date().getFullYear();
+      const code = `INT-${year}-${String(1 + Math.floor(Math.random() * 900)).padStart(3, "0")}`;
+      const it: InternalTicket = {
+        id: uid(),
+        code,
+        openedBy: "NPS Bot",
+        openedAt: now(),
+        targetDepartment: "qualidade",
+        priority: "alta",
+        subject: `NPS detrator (${i.q1Recomendacao}) — ${i.customer}`,
+        description:
+          `Cliente ${i.customer} (${i.customerTier}) avaliou com nota ${i.q1Recomendacao}.\n\n` +
+          `Resolução: ${i.q2Resolucao}/10 · Agilidade: ${i.q3Agilidade}/10\n\n` +
+          `Feedback: ${i.feedback ?? "—"}`,
+        linkedOccurrenceId: i.occurrenceId,
+        linkedCustomer: i.customer,
+        slaHours: 16,
+        status: "aberto",
+        responses: [],
+      };
+      setInternalTickets((prev) => [it, ...prev]);
+      if (i.occurrenceId) {
+        setTickets((prev) =>
+          prev.map((t) =>
+            t.id === i.occurrenceId
+              ? { ...t, internalTicketIds: [...(t.internalTicketIds ?? []), it.id] }
+              : t,
+          ),
+        );
+        append(i.occurrenceId, `Auto: ticket interno ${code} aberto para Qualidade (NPS detrator)`);
+      }
+    }
+
+    return rec;
+  }, [append]);
+
   return (
     <Ctx.Provider
       value={{
         tickets,
         internalTickets,
+        npsRecords,
         currentUser,
         createTicket,
         updateStatus,
@@ -358,6 +438,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         createInternalTicket,
         respondInternalTicket,
         updateInternalStatus,
+        submitNpsSurvey,
       }}
     >
       {children}

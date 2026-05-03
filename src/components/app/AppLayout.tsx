@@ -1,5 +1,5 @@
 import { Link, Outlet, useRouterState } from "@tanstack/react-router";
-import { LayoutDashboard, Ticket, PlusCircle, BarChart3, Bell, Search, Users } from "lucide-react";
+import { LayoutDashboard, Ticket, PlusCircle, BarChart3, Bell, Search, Users, Smile } from "lucide-react";
 import { Logo } from "./Logo";
 import { cn } from "@/lib/utils";
 
@@ -8,6 +8,7 @@ const nav = [
   { to: "/tickets", label: "Tickets", icon: Ticket },
   { to: "/internos", label: "Internos", icon: Users },
   { to: "/tickets/novo", label: "Novo Ticket", icon: PlusCircle },
+  { to: "/nps", label: "NPS", icon: Smile },
   { to: "/gestor", label: "Gestor", icon: BarChart3 },
 ];
 
@@ -56,7 +57,7 @@ export function AppLayout() {
       </header>
 
       {/* Mobile bottom nav */}
-      <nav className="fixed bottom-0 left-0 right-0 z-30 grid grid-cols-5 border-t bg-background lg:hidden">
+      <nav className="fixed bottom-0 left-0 right-0 z-30 grid grid-cols-6 border-t bg-background lg:hidden">
         {nav.map((n) => {
           const active = n.to === "/" ? path === "/" : path.startsWith(n.to);
           const Icon = n.icon;
