@@ -157,7 +157,12 @@ function InternalDetail({
             <li key={r.id} className="rounded-md border-l-2 border-gold/40 bg-background px-3 py-2">
               <div className="text-xs font-semibold">{r.responder}</div>
               <div className="text-sm">{r.text}</div>
-              <div className="text-[10px] text-muted-foreground">{new Date(r.at).toLocaleString("pt-BR")}</div>
+              <div className="text-[10px] text-muted-foreground">
+                {new Date(r.at).toLocaleString("pt-BR")}
+                {typeof r.responseHours === "number" && (
+                  <span className="ml-2">· resp. em {r.responseHours.toFixed(1)}h</span>
+                )}
+              </div>
             </li>
           ))}
           {ticket.responses.length === 0 && (
@@ -212,6 +217,11 @@ function InternalDetail({
         <div className="rounded-md border border-success/30 bg-success/5 p-3 text-sm">
           <div className="text-[11px] font-semibold uppercase text-success">Resolução</div>
           <div>{ticket.resolutionSummary}</div>
+          {typeof ticket.slaCumprido === "boolean" && (
+            <div className="mt-1 text-[11px] text-muted-foreground">
+              SLA: {ticket.slaCumprido ? "✅ cumprido" : "⚠️ violado"}
+            </div>
+          )}
         </div>
       )}
     </div>
