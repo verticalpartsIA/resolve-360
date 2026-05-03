@@ -19,10 +19,10 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/_app/ocorrencia/$ro")({ component: TicketDetail });
 
 function TicketDetail() {
-  const { id } = Route.useParams();
+  const { ro } = Route.useParams();
   const router = useRouter();
   const { tickets, internalTickets, updateStatus, resolveTicket, setNps, createInternalTicket } = useStore();
-  const ticket = tickets.find((t) => t.id === id);
+  const ticket = tickets.find((t) => t.code === ro || t.id === ro);
 
   if (!ticket) {
     return (
