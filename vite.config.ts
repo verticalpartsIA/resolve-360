@@ -4,6 +4,27 @@
 //     componentTagger (dev-only), VITE_* env injection, @ path alias, React/TanStack dedupe,
 //     error logger plugins, and sandbox detection (port/host/strictPort).
 // You can pass additional config via defineConfig({ vite: { ... } }) if needed.
-import { defineConfig } from "@lovable.dev/vite-tanstack-config";
+import { defineConfig as lovableDefineConfig } from "@lovable.dev/vite-tanstack-config";
+import { defineConfig as viteDefineConfig } from "vite";
+import { tanstackStart } from "@tanstack/react-start/plugin/vite";
+import viteReact from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
+import tsConfigPaths from "vite-tsconfig-paths";
 
-export default defineConfig();
+// BUILD_TARGET=node → Hostinger Node.js server
+// sem variável  → Lovable Cloud (Cloudflare Workers, padrão)
+const isNode = process.env.BUILD_TARGET === "node";
+
+export default isNode
+  ? viteDefineConfig({
+      plugins: [
+        tsConfigPaths(),
+        tailwindcss(),
+        tanstackStart({ target: "node-server" }),
+        viteReact(),
+      ],
+      resolve: {
+        dedupe: ["react", "react-dom", "@tanstack/react-router", "@tanstack/react-start"],
+      },
+    })
+  : lovableDefineConfig();
