@@ -23,9 +23,12 @@ const uid = () => Math.random().toString(36).slice(2, 10);
 const hoursBetween = (a: string, b: string) =>
   Math.max(0, (new Date(b).getTime() - new Date(a).getTime()) / (1000 * 60 * 60));
 
+// IDs estáveis no seed para evitar mismatch de hidratação (server vs client)
+let __seedCounter = 0;
+const sid = () => `seed-${++__seedCounter}`;
 const seed: Ticket[] = [
   {
-    id: uid(),
+    id: sid(),
     code: "VP-2026-0142",
     customer: "AutoCenter Silva Ltda",
     customerDoc: "12.345.678/0001-90",
@@ -40,13 +43,13 @@ const seed: Ticket[] = [
     updatedAt: now(),
     attachments: [],
     audit: [
-      { id: uid(), at: new Date(Date.now() - 1000 * 60 * 60 * 8).toISOString(), actor: "WhatsApp Bot", action: "Ticket criado via WhatsApp" },
-      { id: uid(), at: new Date(Date.now() - 1000 * 60 * 60 * 6).toISOString(), actor: "Maria Souza", action: "Status: Aberto → Em análise" },
+      { id: sid(), at: new Date(Date.now() - 1000 * 60 * 60 * 8).toISOString(), actor: "WhatsApp Bot", action: "Ticket criado via WhatsApp" },
+      { id: sid(), at: new Date(Date.now() - 1000 * 60 * 60 * 6).toISOString(), actor: "Maria Souza", action: "Status: Aberto → Em análise" },
     ],
     assignee: "Maria Souza",
   },
   {
-    id: uid(),
+    id: sid(),
     code: "VP-2026-0141",
     customer: "Mecânica Veloz",
     customerDoc: "98.765.432/0001-12",
@@ -60,11 +63,11 @@ const seed: Ticket[] = [
     createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
     updatedAt: now(),
     attachments: [],
-    audit: [{ id: uid(), at: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(), actor: "João Lima", action: "Ticket criado manualmente" }],
+    audit: [{ id: sid(), at: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(), actor: "João Lima", action: "Ticket criado manualmente" }],
     assignee: "João Lima",
   },
   {
-    id: uid(),
+    id: sid(),
     code: "VP-2026-0140",
     customer: "Distribuidora Norte Peças",
     part: "Amortecedor Traseiro",
@@ -84,14 +87,14 @@ const seed: Ticket[] = [
     nps: 9,
     npsSentAt: new Date(Date.now() - 1000 * 60 * 60 * 23).toISOString(),
     audit: [
-      { id: uid(), at: new Date(Date.now() - 1000 * 60 * 60 * 72).toISOString(), actor: "WhatsApp Bot", action: "Ticket criado via WhatsApp" },
-      { id: uid(), at: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(), actor: "Carla Mendes", action: "Causa raiz definida: Fornecedor" },
-      { id: uid(), at: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(), actor: "Carla Mendes", action: "Ticket concluído" },
+      { id: sid(), at: new Date(Date.now() - 1000 * 60 * 60 * 72).toISOString(), actor: "WhatsApp Bot", action: "Ticket criado via WhatsApp" },
+      { id: sid(), at: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(), actor: "Carla Mendes", action: "Causa raiz definida: Fornecedor" },
+      { id: sid(), at: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(), actor: "Carla Mendes", action: "Ticket concluído" },
     ],
     assignee: "Carla Mendes",
   },
   {
-    id: uid(),
+    id: sid(),
     code: "VP-2026-0139",
     customer: "Auto Peças Brasil",
     part: "Correia Dentada",
@@ -105,13 +108,13 @@ const seed: Ticket[] = [
     updatedAt: now(),
     attachments: [],
     audit: [
-      { id: uid(), at: new Date(Date.now() - 1000 * 60 * 60 * 30).toISOString(), actor: "João Lima", action: "Ticket criado manualmente" },
-      { id: uid(), at: new Date(Date.now() - 1000 * 60 * 60 * 20).toISOString(), actor: "Carla Mendes", action: "Em laudo técnico" },
+      { id: sid(), at: new Date(Date.now() - 1000 * 60 * 60 * 30).toISOString(), actor: "João Lima", action: "Ticket criado manualmente" },
+      { id: sid(), at: new Date(Date.now() - 1000 * 60 * 60 * 20).toISOString(), actor: "Carla Mendes", action: "Em laudo técnico" },
     ],
     assignee: "Carla Mendes",
   },
   {
-    id: uid(),
+    id: sid(),
     code: "VP-2026-0138",
     customer: "Garage Premium",
     part: "Velas de Ignição (kit 4)",
@@ -130,8 +133,8 @@ const seed: Ticket[] = [
     attachments: [],
     nps: 7,
     audit: [
-      { id: uid(), at: new Date(Date.now() - 1000 * 60 * 60 * 120).toISOString(), actor: "WhatsApp Bot", action: "Ticket criado" },
-      { id: uid(), at: new Date(Date.now() - 1000 * 60 * 60 * 80).toISOString(), actor: "Maria Souza", action: "Concluído — causa: Cliente" },
+      { id: sid(), at: new Date(Date.now() - 1000 * 60 * 60 * 120).toISOString(), actor: "WhatsApp Bot", action: "Ticket criado" },
+      { id: sid(), at: new Date(Date.now() - 1000 * 60 * 60 * 80).toISOString(), actor: "Maria Souza", action: "Concluído — causa: Cliente" },
     ],
     assignee: "Maria Souza",
   },

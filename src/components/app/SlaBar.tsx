@@ -1,8 +1,20 @@
+import { useEffect, useState } from "react";
 import { slaStatus } from "@/lib/store";
 import type { Ticket } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 export function SlaBar({ ticket }: { ticket: Ticket }) {
+  // Evita hydration mismatch: SLA depende de Date.now() (varia server vs client)
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  if (!mounted) {
+    return (
+      <div className="space-y-1">
+        <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted" />
+        <div className="text-[10px] font-medium text-muted-foreground">—</div>
+      </div>
+    );
+  }
   const s = slaStatus(ticket);
   const tone = {
     ok: "bg-success",
