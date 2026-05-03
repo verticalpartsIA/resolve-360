@@ -15,7 +15,9 @@ export type OccurrenceReason =
   | "reparo"
   | "menor_quantidade"
   | "destinatario_errado"
-  | "troca_material";
+  | "troca_material"
+  | "atraso_entrega"
+  | "outros";
 
 export type ResponsibleSector =
   | "comercial"
@@ -36,6 +38,31 @@ export const OCCURRENCE_REASON_LABEL: Record<OccurrenceReason, string> = {
   menor_quantidade: "Material enviado em menor quantidade",
   destinatario_errado: "Destinatário errado",
   troca_material: "Troca de material",
+};
+
+export type ResolutionStatus = "autorizado" | "recusado" | "em_analise";
+
+export const RESOLUTION_STATUS_LABEL: Record<ResolutionStatus, string> = {
+  autorizado: "Autorizado",
+  recusado: "Recusado",
+  em_analise: "Em Análise",
+};
+
+export type ContainmentAction =
+  | "sucatear"
+  | "retrabalhar"
+  | "selecao"
+  | "reclassificar"
+  | "aceito_concessao"
+  | "devolver";
+
+export const CONTAINMENT_ACTION_LABEL: Record<ContainmentAction, string> = {
+  sucatear: "Sucatear",
+  retrabalhar: "Retrabalhar",
+  selecao: "Seleção",
+  reclassificar: "Reclassificar",
+  aceito_concessao: "Aceito sob concessão",
+  devolver: "Devolver",
 };
 
 export const RESPONSIBLE_SECTOR_LABEL: Record<ResponsibleSector, string> = {
@@ -125,20 +152,41 @@ export interface Attachment {
 export interface Ticket {
   id: string;
   code: string;
+  roNumber?: string;
+  emitente?: string;
+  dataEmissao?: string;
   customer: string;
   customerDoc?: string;
+  customerContato?: string;
+  customerTelefone?: string;
   city?: string;
   state?: string;
+  fornecedor?: string;
   part: string;
   partCode: string;
+  vendedor?: string;
+  nfNumero?: string;
+  nfValor?: number;
   quantity?: number;
   unitValue?: number;
   reason: string;
   occurrenceReason?: OccurrenceReason;
   responsibleSector?: ResponsibleSector;
   origin?: OccurrenceOrigin;
+  resolutionStatus?: ResolutionStatus;
   freightCostVp?: number;
   freightCostCustomer?: number;
+  custoNaoQualidade?: number;
+  acaoContencao?: ContainmentAction[];
+  descricaoNaoConformidade?: string;
+  analiseQualidade?: string;
+  classificacaoQualidade?: string;
+  observacoesQualidade?: string;
+  whatsappThreadId?: string;
+  dataInicioAnalise?: string;
+  dataLimiteAtendimento?: string;
+  dataFinalizacao?: string;
+  slaViolado?: boolean;
   channel: TicketChannel;
   status: TicketStatus;
   priority: TicketPriority;
@@ -164,6 +212,11 @@ export const ROOT_CAUSE_LABEL: Record<RootCause, string> = {
   cliente: "Cliente",
   fornecedor: "Fornecedor",
 };
+
+export const RO_PREFIX = "RO";
+export function generateRoNumber(year: number, seq: number): string {
+  return `${RO_PREFIX}-${year}-${String(seq).padStart(3, "0")}`;
+}
 
 export const STATUS_LABEL: Record<TicketStatus, string> = {
   aberto: "Aberto",
