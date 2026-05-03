@@ -7,11 +7,13 @@ import {
   CONTAINMENT_ACTION_LABEL,
   INTERNAL_DEPT_LABEL,
   INTERNAL_DEFAULT_SLA,
+  RESOLUTION_STATUS_LABEL,
   type TicketChannel,
   type TicketPriority,
   type OccurrenceReason,
   type ResponsibleSector,
   type OccurrenceOrigin,
+  type ResolutionStatus,
   type ContainmentAction,
   type InternalDepartment,
   type InternalPriority,
@@ -64,6 +66,7 @@ function NewTicket() {
     occurrenceReason: "devolucao_total" as OccurrenceReason,
     responsibleSector: "nao_aplica" as ResponsibleSector,
     origin: "externo" as OccurrenceOrigin,
+    resolutionStatus: "em_analise" as ResolutionStatus,
     emitente: "",
     whatsappThreadId: "",
   });
@@ -270,6 +273,19 @@ function NewTicket() {
                   {(Object.keys(RESPONSIBLE_SECTOR_LABEL) as ResponsibleSector[]).map((k) => (
                     <option key={k} value={k}>{RESPONSIBLE_SECTOR_LABEL[k]}</option>
                   ))}
+                </select>
+              </Field>
+              <Field label="Origem">
+                <select value={form.origin} onChange={(e) => setForm({ ...form, origin: e.target.value as OccurrenceOrigin })} className={inputCls}>
+                  <option value="interno">Interno (problema na VP)</option>
+                  <option value="externo">Externo (falha do cliente)</option>
+                </select>
+              </Field>
+              <Field label="Situação">
+                <select value={form.resolutionStatus} onChange={(e) => setForm({ ...form, resolutionStatus: e.target.value as ResolutionStatus })} className={inputCls}>
+                  <option value="em_analise">{RESOLUTION_STATUS_LABEL.em_analise}</option>
+                  <option value="autorizado">{RESOLUTION_STATUS_LABEL.autorizado}</option>
+                  <option value="recusado">{RESOLUTION_STATUS_LABEL.recusado}</option>
                 </select>
               </Field>
               <Field label="NF (número)">

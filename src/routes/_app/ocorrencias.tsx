@@ -3,12 +3,29 @@ import { useState } from "react";
 import { useStore } from "@/lib/store";
 import { StatusBadge, PriorityBadge } from "@/components/app/StatusBadge";
 import { SlaBar } from "@/components/app/SlaBar";
-import { STATUS_LABEL, type TicketStatus } from "@/lib/types";
+import {
+  STATUS_LABEL,
+  OCCURRENCE_REASON_LABEL,
+  RESPONSIBLE_SECTOR_LABEL,
+  type TicketStatus,
+  type OccurrenceReason,
+} from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app/ocorrencias")({ component: TicketsList });
 
 const filters: ("todos" | TicketStatus)[] = ["todos", "aberto", "analise", "laudo", "concluido"];
+
+const REASON_TONE: Record<OccurrenceReason, string> = {
+  devolucao_total: "bg-destructive/15 text-destructive border-destructive/30",
+  devolucao_parcial: "bg-destructive/10 text-destructive border-destructive/20",
+  reparo: "bg-warning/15 text-warning-foreground border-warning/30",
+  troca_material: "bg-blue-500/15 text-blue-600 border-blue-500/30 dark:text-blue-400",
+  atraso_entrega: "bg-orange-500/15 text-orange-600 border-orange-500/30 dark:text-orange-400",
+  menor_quantidade: "bg-muted text-muted-foreground border-border",
+  destinatario_errado: "bg-purple-500/15 text-purple-600 border-purple-500/30 dark:text-purple-400",
+  outros: "bg-muted text-muted-foreground border-border",
+};
 
 function TicketsList() {
   const { tickets } = useStore();
@@ -59,9 +76,11 @@ function TicketsList() {
       </div>
 
       <div className="overflow-hidden rounded-xl border bg-card shadow-[var(--shadow-elegant)]">
-        <div className="hidden grid-cols-[120px_1fr_auto_120px_140px_40px] items-center gap-4 border-b bg-muted/40 px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground lg:grid">
+        <div className="hidden grid-cols-[110px_1fr_140px_110px_auto_110px_140px_30px] items-center gap-3 border-b bg-muted/40 px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground lg:grid">
           <div>Código</div>
           <div>Cliente / Peça</div>
+          <div>Motivo</div>
+          <div>Setor</div>
           <div>Status</div>
           <div>Prioridade</div>
           <div>SLA</div>
@@ -73,13 +92,23 @@ function TicketsList() {
               <Link
                 to="/ocorrencia/$ro"
                 params={{ ro: t.code }}
-                className="grid grid-cols-1 gap-3 px-5 py-4 hover:bg-muted/40 lg:grid-cols-[120px_1fr_auto_120px_140px_40px] lg:items-center lg:gap-4"
+                className="grid grid-cols-1 gap-3 px-5 py-4 hover:bg-muted/40 lg:grid-cols-[110px_1fr_140px_110px_auto_110px_140px_30px] lg:items-center lg:gap-3"
               >
                 <span className="font-mono text-xs font-semibold">{t.code}</span>
                 <div className="min-w-0">
                   <div className="truncate font-medium">{t.customer}</div>
                   <div className="truncate text-xs text-muted-foreground">{t.part} · {t.partCode}</div>
                 </div>
+                {t.occurrenceReason ? (
+                  <span className={cn("inline-flex w-fit rounded-md border px-2 py-0.5 text-[10px] font-semibold", REASON_TONE[t.occurrenceReason])}>
+                    {OCCURRENCE_REASON_LABEL[t.occurrenceReason]}
+                  </span>
+                ) : (
+                  <span className="text-[11px] text-muted-foreground">—</span>
+                )}
+                <span className="text-xs text-muted-foreground">
+                  {t.responsibleSector ? RESPONSIBLE_SECTOR_LABEL[t.responsibleSector] : "—"}
+                </span>
                 <StatusBadge status={t.status} />
                 <PriorityBadge priority={t.priority} />
                 <SlaBar ticket={t} />
