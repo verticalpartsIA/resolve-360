@@ -76,21 +76,27 @@ function OperatorDashboard() {
 }
 
 function KpiCard({ icon: Icon, label, value, tone }: { icon: React.ComponentType<{ className?: string }>; label: string; value: number; tone: "primary" | "danger" | "success" | "gold" }) {
-  const styles = {
-    primary: "bg-primary text-primary-foreground",
-    danger: "bg-destructive/10 text-destructive",
-    success: "bg-success/10 text-success",
-    gold: "bg-gold-soft text-gold-foreground",
+  // Hierarquia visual: borda colorida + fundo suave + badge contextual + hover elevado
+  const tones = {
+    primary: { card: "border-l-4 border-l-primary bg-card", icon: "bg-primary/10 text-primary", badge: { text: "ATIVO", cls: "bg-primary/10 text-primary" } },
+    danger:  { card: "border-l-4 border-l-[#FF6B6B] bg-[#FFEBEE]", icon: "bg-[#FF6B6B]/15 text-[#FF6B6B]", badge: { text: "ALTO", cls: "bg-[#FF6B6B] text-white" } },
+    success: { card: "border-l-4 border-l-success bg-success/5", icon: "bg-success/15 text-success", badge: { text: "OK", cls: "bg-success/15 text-success" } },
+    gold:    { card: "border-l-4 border-l-[#D4AF37] bg-[#FFF9E6]", icon: "bg-[#D4AF37]/15 text-[#9a7d18]", badge: { text: "EM ANDAMENTO", cls: "bg-[#D4AF37] text-black" } },
   }[tone];
   return (
-    <div className="rounded-xl border bg-card p-5 shadow-[var(--shadow-elegant)]">
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</span>
-        <span className={`flex h-8 w-8 items-center justify-center rounded-md ${styles}`}>
+    <div className={`rounded-xl border ${tones.card} p-5 shadow-[var(--shadow-elegant)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_16px_rgba(0,0,0,0.1)]`}>
+      <div className="flex items-center gap-2">
+        <span className={`flex h-8 w-8 items-center justify-center rounded-md ${tones.icon}`}>
           <Icon className="h-4 w-4" />
         </span>
+        <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{label}</span>
       </div>
-      <div className="mt-3 text-3xl font-bold tracking-tight">{value}</div>
+      <div className="mt-3 flex items-end justify-between gap-2">
+        <div className="text-3xl font-bold tracking-tight">{value}</div>
+        <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${tones.badge.cls}`}>
+          {tones.badge.text}
+        </span>
+      </div>
     </div>
   );
 }
