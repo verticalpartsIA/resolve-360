@@ -1,10 +1,36 @@
 import http from "node:http";
+import { createReadStream, existsSync, statSync } from "node:fs";
+import { join, extname } from "node:path";
+import { fileURLToPath } from "node:url";
 import { Readable } from "node:stream";
 
 import app from "../dist/server/server.js";
 
 const port = Number(process.env.PORT || 3000);
 const host = process.env.HOST || "0.0.0.0";
+
+const __dirname = fileURLToPath(new URL(".", import.meta.url));
+const clientDir = join(__dirname, "../dist/client");
+
+const MIME_TYPES = {
+  ".js":   "application/javascript",
+  ".mjs":  "application/javascript",
+  ".css":  "text/css",
+  ".html": "text/html",
+  ".json": "application/json",
+  ".png":  "image/png",
+  ".jpg":  "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".gif":  "image/gif",
+  ".svg":  "image/svg+xml",
+  ".ico":  "image/x-icon",
+  ".woff": "font/woff",
+  ".woff2":"font/woff2",
+  ".ttf":  "font/ttf",
+  ".eot":  "application/vnd.ms-fontobject",
+  ".webp": "image/webp",
+  ".map":  "application/json",
+};
 
 function toHeaders(nodeHeaders) {
   const headers = new Headers();
@@ -35,6 +61,20 @@ function toBody(req) {
 
 const server = http.createServer(async (req, res) => {
   try {
+    const urlPath = new URL(req.url || "/", "http://localhost").pathname;
+    const filePath = join(clientDir, urlPath);
+
+    // Serve static files from dist/client/
+    if (existsSync(filePath) && statSync(filePath).isFile()) {
+      const ext = extname(filePath).toLowerCase();
+      const contentType = MIME_TYPES[ext] || "application/octet-stream";
+      res.setHeader("Content-Type", contentType);
+      res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+      res.statusCode = 200;
+      createReadStream(filePath).pipe(res);
+      return;
+    }
+
     const origin = `http://${req.headers.host || `localhost:${port}`}`;
     const request = new Request(new URL(req.url || "/", origin), {
       method: req.method,
