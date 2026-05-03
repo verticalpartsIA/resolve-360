@@ -134,10 +134,16 @@ const seed: Ticket[] = [
 interface NewTicketInput {
   customer: string;
   customerDoc?: string;
+  customerContato?: string;
+  customerTelefone?: string;
   city?: string;
   state?: string;
+  fornecedor?: string;
   part: string;
   partCode: string;
+  vendedor?: string;
+  nfNumero?: string;
+  nfValor?: number;
   quantity?: number;
   unitValue?: number;
   reason: string;
@@ -147,6 +153,7 @@ interface NewTicketInput {
   channel: TicketChannel;
   priority: TicketPriority;
   slaHours: number;
+  emitente?: string;
 }
 
 interface NewInternalTicketInput {
@@ -192,15 +199,25 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const createTicket = useCallback<StoreCtx["createTicket"]>((i) => {
     const code = `VP-2026-${String(143 + Math.floor(Math.random() * 900)).padStart(4, "0")}`;
+    const year = new Date().getFullYear();
+    const seq = 1 + Math.floor(Math.random() * 900);
+    const roNumber = `RO-${year}-${String(seq).padStart(3, "0")}`;
+    const created = now();
+    const dataLimite = new Date(Date.now() + i.slaHours * 3600 * 1000).toISOString();
     const t: Ticket = {
       id: uid(),
       code,
+      roNumber,
+      emitente: i.emitente ?? currentUser,
+      dataEmissao: created,
+      dataLimiteAtendimento: dataLimite,
+      slaViolado: false,
       ...i,
       status: "aberto",
-      createdAt: now(),
-      updatedAt: now(),
+      createdAt: created,
+      updatedAt: created,
       attachments: [],
-      audit: [{ id: uid(), at: now(), actor: currentUser, action: `Ticket criado (${i.channel === "whatsapp" ? "WhatsApp" : "Manual"})` }],
+      audit: [{ id: uid(), at: created, actor: currentUser, action: `RO ${roNumber} criado (${i.channel === "whatsapp" ? "WhatsApp" : "Manual"})` }],
       assignee: currentUser,
     };
     setTickets((prev) => [t, ...prev]);
