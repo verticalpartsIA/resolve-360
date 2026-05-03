@@ -450,7 +450,7 @@ function toFO504Row(t: ReturnType<typeof useStore>["tickets"][number]) {
     t.status === "concluido" ? "Autorizado" : t.status === "aberto" ? "Pendente" : t.status,
     t.freightCostVp ?? "",
     t.resolvedAt ? new Date(t.resolvedAt).toLocaleString("pt-BR") : "",
-    t.observacoes ?? "",
+    "",
     t.dataInicioAnalise ? new Date(t.dataInicioAnalise).toLocaleString("pt-BR") : "",
     t.dataLimiteAtendimento ? new Date(t.dataLimiteAtendimento).toLocaleString("pt-BR") : "",
     t.descricaoNaoConformidade ?? "",
