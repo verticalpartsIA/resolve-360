@@ -69,8 +69,14 @@ jobs:
           name: hostinger-deploy-package
           path: deploy
 
+      - name: Resolve deploy flags
+        id: flags
+        run: |
+          echo "has_ftp=${{ secrets.HOSTINGER_FTP_SERVER != '' }}" >> "$GITHUB_OUTPUT"
+          echo "has_ssh=${{ secrets.HOSTINGER_SSH_HOST != '' }}" >> "$GITHUB_OUTPUT"
+
       - name: Deploy files over FTP
-        if: ${{ secrets.HOSTINGER_FTP_SERVER != '' }}
+        if: steps.flags.outputs.has_ftp == 'true'
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.HOSTINGER_FTP_SERVER }}
@@ -81,7 +87,7 @@ jobs:
           dangerous-clean-slate: false
 
       - name: Install production dependencies over SSH
-        if: ${{ secrets.HOSTINGER_SSH_HOST != '' }}
+        if: steps.flags.outputs.has_ssh == 'true'
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.HOSTINGER_SSH_HOST }}
