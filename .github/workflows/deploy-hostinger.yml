@@ -70,7 +70,7 @@ jobs:
           path: deploy
 
       - name: Deploy files over FTP
-        if: ${{ secrets.HOSTINGER_FTP_SERVER != '' && secrets.HOSTINGER_FTP_USERNAME != '' && secrets.HOSTINGER_FTP_PASSWORD != '' && secrets.HOSTINGER_FTP_REMOTE_DIR != '' }}
+        if: ${{ secrets.HOSTINGER_FTP_SERVER != '' }}
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.HOSTINGER_FTP_SERVER }}
@@ -81,7 +81,7 @@ jobs:
           dangerous-clean-slate: false
 
       - name: Install production dependencies over SSH
-        if: ${{ secrets.HOSTINGER_SSH_HOST != '' && secrets.HOSTINGER_SSH_USERNAME != '' && secrets.HOSTINGER_SSH_PRIVATE_KEY != '' && secrets.HOSTINGER_APP_DIR != '' }}
+        if: ${{ secrets.HOSTINGER_SSH_HOST != '' }}
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.HOSTINGER_SSH_HOST }}
