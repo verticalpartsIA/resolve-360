@@ -94,6 +94,10 @@ jobs:
           script: |
             set -eu
             cd "${{ secrets.HOSTINGER_APP_DIR }}"
+            printf 'SUPABASE_URL=%s\nSUPABASE_PUBLISHABLE_KEY=%s\nSUPABASE_SERVICE_ROLE_KEY=%s\n' \
+              '${{ secrets.PROD_SUPABASE_URL }}' \
+              '${{ secrets.PROD_SUPABASE_PUBLISHABLE_KEY }}' \
+              '${{ secrets.PROD_SUPABASE_SERVICE_ROLE_KEY }}' > .env
             npm install --omit=dev
             if [ -n "${{ secrets.HOSTINGER_RESTART_COMMAND }}" ]; then
               eval "${{ secrets.HOSTINGER_RESTART_COMMAND }}"
