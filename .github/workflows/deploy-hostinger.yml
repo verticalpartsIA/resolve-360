@@ -31,9 +31,6 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Swap Vite config for Node target
-        run: cp hostinger/vite.config.node.ts vite.config.ts
-
       - name: Build production bundle
         run: bun run build
 

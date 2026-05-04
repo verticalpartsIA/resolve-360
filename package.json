@@ -4,9 +4,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite dev",
-    "build": "vite build",
+    "build": "BUILD_TARGET=node vite build",
     "build:dev": "vite build --mode development",
+    "build:lovable": "vite build",
     "preview": "vite preview",
+    "start": "node hostinger/server.mjs",
     "lint": "eslint .",
     "format": "prettier --write ."
   },
