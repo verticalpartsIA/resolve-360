@@ -85,7 +85,6 @@ function ProdutosPage() {
               <th className="px-4 py-3 text-left">Família</th>
               <th className="px-4 py-3 text-left">Marca</th>
               <th className="px-4 py-3 text-left">Un.</th>
-              <th className="px-4 py-3 text-right">Preço Unit.</th>
               <th className="px-4 py-3 text-left">Tipo</th>
             </tr>
           </thead>
@@ -98,11 +97,6 @@ function ProdutosPage() {
                   <td className="px-4 py-3 text-muted-foreground">{p.codigo_familia || "—"}</td>
                   <td className="px-4 py-3 text-muted-foreground">{p.marca || "—"}</td>
                   <td className="px-4 py-3 text-muted-foreground">{p.unidade || "—"}</td>
-                  <td className="px-4 py-3 text-right">
-                    {p.valor_unitario != null
-                      ? p.valor_unitario.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
-                      : "—"}
-                  </td>
                   <td className="px-4 py-3">
                     {p.tipo_item ? (
                       <span className="inline-flex rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">

@@ -149,7 +149,6 @@ function NewTicket() {
       ...f,
       part: p.descricao,
       partCode: p.codigo_produto ?? p.codigo,
-      unitValue: p.valor_unitario ?? 0,
     }));
     setPartQuery(p.descricao);
     setShowPartSuggest(false);
@@ -324,7 +323,7 @@ function NewTicket() {
                             <button type="button" onClick={() => pickPart(p)} className="flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left text-sm hover:bg-muted">
                               <span className="font-medium">{p.descricao}</span>
                               <span className="text-xs text-muted-foreground">
-                                {p.codigo_produto ?? p.codigo}{p.marca ? ` · ${p.marca}` : ""}{p.unidade ? ` · ${p.unidade}` : ""}{p.valor_unitario != null ? ` · ${p.valor_unitario.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}` : ""}
+                                {p.codigo_produto ?? p.codigo}{p.marca ? ` · ${p.marca}` : ""}{p.unidade ? ` · ${p.unidade}` : ""}
                               </span>
                             </button>
                           </li>
