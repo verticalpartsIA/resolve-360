@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useStore } from "@/lib/store";
 import {
   OCCURRENCE_REASON_LABEL,
@@ -18,7 +18,8 @@ import {
   type InternalDepartment,
   type InternalPriority,
 } from "@/lib/types";
-import { MessageCircle, FileEdit, Check, Bell, Mail, Phone, Search } from "lucide-react";
+import { fetchClientesAtivos, fetchProdutosAtivos, type OmieCliente, type OmieProduto } from "@/integrations/supabase/erp-client";
+import { MessageCircle, FileEdit, Check, Bell, Mail, Phone, Search, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app/nova-ocorrencia")({ component: NewTicket });
@@ -30,14 +31,6 @@ const STEPS = [
   { n: 4, title: "Confirmação", desc: "Notificações e SLA" },
 ] as const;
 
-// "ERP mock" — clientes recentes para autocomplete
-const CLIENT_DB = [
-  { customer: "AutoCenter Silva Ltda", customerDoc: "12.345.678/0001-90", customerContato: "Roberto Silva", customerTelefone: "(11) 98877-1122", city: "São Paulo", state: "SP", recentParts: [{ part: "Pastilha de Freio Dianteira", partCode: "PF-3421" }, { part: "Disco de Freio", partCode: "DF-9911" }] },
-  { customer: "Mecânica Veloz", customerDoc: "98.765.432/0001-12", customerContato: "Joana Pires", customerTelefone: "(11) 91234-5678", city: "Campinas", state: "SP", recentParts: [{ part: "Filtro de Óleo", partCode: "FO-1102" }] },
-  { customer: "Distribuidora Norte Peças", customerDoc: "33.444.555/0001-77", customerContato: "Marcos Lima", customerTelefone: "(91) 99000-1111", city: "Belém", state: "PA", recentParts: [{ part: "Amortecedor Traseiro", partCode: "AM-9921" }] },
-  { customer: "Auto Peças Brasil", customerDoc: "55.666.777/0001-22", customerContato: "Paula Reis", customerTelefone: "(21) 98888-3333", city: "Rio de Janeiro", state: "RJ", recentParts: [{ part: "Correia Dentada", partCode: "CD-5510" }] },
-];
-
 function NewTicket() {
   const { createTicket, createInternalTicket, tickets } = useStore();
   const navigate = useNavigate();
@@ -45,6 +38,27 @@ function NewTicket() {
   const [channel, setChannel] = useState<TicketChannel>("manual");
   const [clientQuery, setClientQuery] = useState("");
   const [showSuggest, setShowSuggest] = useState(false);
+
+  // ERP data
+  const [erpClientes, setErpClientes] = useState<OmieCliente[]>([]);
+  const [erpProdutos, setErpProdutos] = useState<OmieProduto[]>([]);
+  const [erpLoading, setErpLoading] = useState(true);
+  const [partQuery, setPartQuery] = useState("");
+  const [showPartSuggest, setShowPartSuggest] = useState(false);
+
+  useEffect(() => {
+    void (async () => {
+      setErpLoading(true);
+      const [clientes, produtos] = await Promise.all([
+        fetchClientesAtivos(),
+        fetchProdutosAtivos(),
+      ]);
+      setErpClientes(clientes);
+      setErpProdutos(produtos);
+      setErpLoading(false);
+    })();
+  }, []);
+
   const [form, setForm] = useState({
     customer: "",
     customerDoc: "",
@@ -82,40 +96,63 @@ function NewTicket() {
   const [err, setErr] = useState<string | null>(null);
   const [created, setCreated] = useState<{ ticketId: string; roNumber: string; internalCode?: string } | null>(null);
 
-  // Autocomplete por nome / CNPJ / telefone
+  // Autocomplete de clientes ERP
   const matches = useMemo(() => {
     const q = clientQuery.trim().toLowerCase();
     if (!q || q.length < 2) return [];
-    return CLIENT_DB.filter(
-      (c) =>
-        c.customer.toLowerCase().includes(q) ||
-        c.customerDoc.toLowerCase().includes(q) ||
-        c.customerTelefone.toLowerCase().includes(q),
-    ).slice(0, 5);
-  }, [clientQuery]);
+    return erpClientes
+      .filter(
+        (c) =>
+          c.nome.toLowerCase().includes(q) ||
+          (c.cnpj_cpf ?? "").toLowerCase().includes(q) ||
+          (c.telefone ?? "").toLowerCase().includes(q),
+      )
+      .slice(0, 6);
+  }, [clientQuery, erpClientes]);
 
-  // Histórico do cliente selecionado
+  // Autocomplete de produtos ERP
+  const partMatches = useMemo(() => {
+    const q = partQuery.trim().toLowerCase();
+    if (!q || q.length < 2) return [];
+    return erpProdutos
+      .filter(
+        (p) =>
+          p.descricao.toLowerCase().includes(q) ||
+          (p.codigo_produto ?? p.codigo).toLowerCase().includes(q) ||
+          (p.marca ?? "").toLowerCase().includes(q),
+      )
+      .slice(0, 6);
+  }, [partQuery, erpProdutos]);
+
+  // Histórico do cliente selecionado (tickets já existentes)
   const clientHistory = useMemo(
     () => (form.customer ? tickets.filter((t) => t.customer === form.customer) : []),
     [form.customer, tickets],
   );
-  const selectedClient = useMemo(
-    () => CLIENT_DB.find((c) => c.customer === form.customer),
-    [form.customer],
-  );
 
-  function pickClient(c: (typeof CLIENT_DB)[number]) {
+  function pickClient(c: OmieCliente) {
     setForm((f) => ({
       ...f,
-      customer: c.customer,
-      customerDoc: c.customerDoc,
-      customerContato: c.customerContato,
-      customerTelefone: c.customerTelefone,
-      city: c.city,
-      state: c.state,
+      customer: c.nome,
+      customerDoc: c.cnpj_cpf ?? "",
+      customerContato: c.nome,
+      customerTelefone: c.telefone ?? "",
+      city: c.cidade ?? "",
+      state: c.estado ?? "",
     }));
-    setClientQuery(c.customer);
+    setClientQuery(c.nome);
     setShowSuggest(false);
+  }
+
+  function pickPart(p: OmieProduto) {
+    setForm((f) => ({
+      ...f,
+      part: p.descricao,
+      partCode: p.codigo_produto ?? p.codigo,
+      unitValue: p.valor_unitario ?? 0,
+    }));
+    setPartQuery(p.descricao);
+    setShowPartSuggest(false);
   }
 
   function toggleContencao(a: ContainmentAction) {
@@ -201,27 +238,37 @@ function NewTicket() {
               <ChannelCard active={channel === "manual"} onClick={() => setChannel("manual")} icon={FileEdit} title="Manual" desc="Telefone, e-mail ou portal" />
             </div>
 
-            <Field label="Buscar cliente (nome, CNPJ ou telefone) *">
+            <Field label="Buscar cliente (nome, CNPJ/CPF ou telefone) *">
               <div className="relative">
-                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"><Search className="h-4 w-4" /></span>
+                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                  {erpLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                </span>
                 <input
                   value={clientQuery}
                   onChange={(e) => { setClientQuery(e.target.value); setShowSuggest(true); }}
                   onFocus={() => setShowSuggest(true)}
+                  disabled={erpLoading}
                   className={cn(inputCls, "pl-9")}
-                  placeholder="Ex: AutoCenter, 12.345..., (11) 98877..."
+                  placeholder={erpLoading ? "Carregando clientes do ERP..." : "Ex: Empresa X, 12.345..., (11) 98877..."}
                 />
                 {showSuggest && matches.length > 0 && (
                   <ul className="absolute z-10 mt-1 w-full overflow-hidden rounded-md border bg-popover shadow-lg">
                     {matches.map((c) => (
-                      <li key={c.customerDoc}>
+                      <li key={c.id}>
                         <button type="button" onClick={() => pickClient(c)} className="flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left text-sm hover:bg-muted">
-                          <span className="font-medium">{c.customer}</span>
-                          <span className="text-xs text-muted-foreground">{c.customerDoc} · {c.customerTelefone}</span>
+                          <span className="font-medium">{c.nome}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {c.cnpj_cpf || "—"}{c.telefone ? ` · ${c.telefone}` : ""}{c.cidade ? ` · ${c.cidade}/${c.estado}` : ""}
+                          </span>
                         </button>
                       </li>
                     ))}
                   </ul>
+                )}
+                {showSuggest && !erpLoading && clientQuery.length >= 2 && matches.length === 0 && (
+                  <div className="absolute z-10 mt-1 w-full rounded-md border bg-popover px-3 py-2 text-xs text-muted-foreground shadow-lg">
+                    Nenhum cliente encontrado. Verifique o nome ou CNPJ.
+                  </div>
                 )}
               </div>
             </Field>
@@ -231,27 +278,16 @@ function NewTicket() {
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
                     <div className="font-semibold">{form.customer}</div>
-                    <div className="text-xs text-muted-foreground">{form.customerDoc} · {form.city}/{form.state}</div>
-                    <div className="mt-1 text-xs text-muted-foreground">Contato: {form.customerContato} · {form.customerTelefone}</div>
+                    <div className="text-xs text-muted-foreground">{form.customerDoc}{form.city ? ` · ${form.city}/${form.state}` : ""}</div>
+                    {form.customerTelefone && (
+                      <div className="mt-1 text-xs text-muted-foreground">Tel: {form.customerTelefone}</div>
+                    )}
                   </div>
                   <div className="text-right text-xs">
                     <div className="font-semibold text-foreground">{clientHistory.length}</div>
                     <div className="text-muted-foreground">ocorrências no histórico</div>
                   </div>
                 </div>
-                {selectedClient && selectedClient.recentParts.length > 0 && (
-                  <div className="mt-3">
-                    <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Produtos recentes (ERP)</p>
-                    <div className="mt-1 flex flex-wrap gap-2">
-                      {selectedClient.recentParts.map((p) => (
-                        <button key={p.partCode} type="button" onClick={() => setForm({ ...form, part: p.part, partCode: p.partCode })}
-                          className="rounded-full border bg-background px-3 py-1 text-xs hover:border-gold">
-                          {p.part} <span className="text-muted-foreground">· {p.partCode}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
             )}
 
@@ -267,11 +303,42 @@ function NewTicket() {
         {step === 2 && !created && (
           <div className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Peça *">
-                <input value={form.part} onChange={(e) => setForm({ ...form, part: e.target.value })} className={inputCls} placeholder="Descrição" />
+              <div className="sm:col-span-2">
+                <Field label="Buscar produto (descrição, código ou marca) *">
+                  <div className="relative">
+                    <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                      {erpLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                    </span>
+                    <input
+                      value={partQuery}
+                      onChange={(e) => { setPartQuery(e.target.value); setForm({ ...form, part: e.target.value, partCode: "" }); setShowPartSuggest(true); }}
+                      onFocus={() => setShowPartSuggest(true)}
+                      disabled={erpLoading}
+                      className={cn(inputCls, "pl-9")}
+                      placeholder={erpLoading ? "Carregando produtos do ERP..." : "Ex: Correia, AB-1234, SKF..."}
+                    />
+                    {showPartSuggest && partMatches.length > 0 && (
+                      <ul className="absolute z-10 mt-1 w-full overflow-hidden rounded-md border bg-popover shadow-lg">
+                        {partMatches.map((p) => (
+                          <li key={p.codigo}>
+                            <button type="button" onClick={() => pickPart(p)} className="flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left text-sm hover:bg-muted">
+                              <span className="font-medium">{p.descricao}</span>
+                              <span className="text-xs text-muted-foreground">
+                                {p.codigo_produto ?? p.codigo}{p.marca ? ` · ${p.marca}` : ""}{p.unidade ? ` · ${p.unidade}` : ""}{p.valor_unitario != null ? ` · ${p.valor_unitario.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}` : ""}
+                              </span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </Field>
+              </div>
+              <Field label="Peça selecionada *">
+                <input value={form.part} onChange={(e) => setForm({ ...form, part: e.target.value })} className={inputCls} placeholder="Ou digitar manualmente" />
               </Field>
               <Field label="Código (ERP) *">
-                <input value={form.partCode} onChange={(e) => setForm({ ...form, partCode: e.target.value })} className={inputCls} placeholder="Ex: PF-3421" />
+                <input value={form.partCode} onChange={(e) => setForm({ ...form, partCode: e.target.value })} className={inputCls} placeholder="Ex: AB-3421" />
               </Field>
               <Field label="Motivo da ocorrência *">
                 <select value={form.occurrenceReason} onChange={(e) => setForm({ ...form, occurrenceReason: e.target.value as OccurrenceReason })} className={inputCls}>
