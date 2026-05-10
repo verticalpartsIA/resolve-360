@@ -3,12 +3,22 @@ import { useMemo, useState } from "react";
 import { BackToDashboard } from "@/components/app/BackToDashboard";
 import type { OmieCliente } from "@/integrations/supabase/erp-client";
 import { fetchClientesAtivosFn } from "@/integrations/supabase/erp-server-fn";
-import { Building2, RefreshCw, Search, AlertCircle, ExternalLink } from "lucide-react";
+import { Building2, RefreshCw, Search, AlertCircle, ExternalLink, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
 
 export const Route = createFileRoute("/_app/clientes")({
   loader: () => fetchClientesAtivosFn(),
   component: ClientesPage,
 });
+
+type SortCol = keyof Pick<OmieCliente, "codigo_integracao" | "cnpj_cpf" | "nome" | "cidade" | "estado" | "segmento">;
+type SortDir = "asc" | "desc";
+
+function SortIcon({ col, sort }: { col: SortCol; sort: { col: SortCol; dir: SortDir } }) {
+  if (sort.col !== col) return <ChevronsUpDown className="inline ml-1 h-3 w-3 opacity-40" />;
+  return sort.dir === "asc"
+    ? <ChevronUp className="inline ml-1 h-3 w-3" />
+    : <ChevronDown className="inline ml-1 h-3 w-3" />;
+}
 
 function ClientesPage() {
   const initial = Route.useLoaderData();
@@ -16,6 +26,11 @@ function ClientesPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [q, setQ] = useState("");
+  const [sort, setSort] = useState<{ col: SortCol; dir: SortDir }>({ col: "nome", dir: "asc" });
+
+  function toggleSort(col: SortCol) {
+    setSort((prev) => prev.col === col ? { col, dir: prev.dir === "asc" ? "desc" : "asc" } : { col, dir: "asc" });
+  }
 
   async function reload() {
     setLoading(true);
@@ -29,16 +44,32 @@ function ClientesPage() {
     }
   }
 
-  const filtered = useMemo(
-    () =>
-      initial.filter((c) =>
-        [c.cnpj_cpf, c.nome, c.email ?? "", c.cidade ?? "", c.estado ?? "", c.segmento ?? ""]
-          .join(" ")
-          .toLowerCase()
-          .includes(q.toLowerCase()),
-      ),
-    [initial, q],
-  );
+  const filtered = useMemo(() => {
+    const list = initial.filter((c) =>
+      [c.cnpj_cpf, c.nome, c.email ?? "", c.cidade ?? "", c.estado ?? "", c.segmento ?? ""]
+        .join(" ")
+        .toLowerCase()
+        .includes(q.toLowerCase()),
+    );
+    return [...list].sort((a, b) => {
+      const av = a[sort.col] ?? "";
+      const bv = b[sort.col] ?? "";
+      const cmp = String(av).localeCompare(String(bv), "pt-BR", { numeric: true });
+      return sort.dir === "asc" ? cmp : -cmp;
+    });
+  }, [initial, q, sort]);
+
+  function Th({ col, label }: { col: SortCol; label: string }) {
+    return (
+      <th
+        className="px-4 py-3 text-left cursor-pointer select-none hover:text-foreground"
+        onClick={() => toggleSort(col)}
+      >
+        {label}
+        <SortIcon col={col} sort={sort} />
+      </th>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -81,11 +112,11 @@ function ClientesPage() {
         <table className="w-full text-sm">
           <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
             <tr>
-              <th className="px-4 py-3 text-left">Cód. Integração</th>
-              <th className="px-4 py-3 text-left">CNPJ / CPF</th>
-              <th className="px-4 py-3 text-left">Razão Social</th>
-              <th className="px-4 py-3 text-left">Cidade / UF</th>
-              <th className="px-4 py-3 text-left">Segmento</th>
+              <Th col="codigo_integracao" label="Cód. Integração" />
+              <Th col="cnpj_cpf" label="CNPJ / CPF" />
+              <Th col="nome" label="Razão Social" />
+              <Th col="cidade" label="Cidade / UF" />
+              <Th col="segmento" label="Segmento" />
               <th className="px-4 py-3 text-left">Contato</th>
               <th className="px-4 py-3 text-left">Ações</th>
             </tr>

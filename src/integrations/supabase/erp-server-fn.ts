@@ -64,7 +64,7 @@ export const fetchProdutosAtivosFn = createServerFn().handler(async (): Promise<
   const client = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
 
   const { data, error } = await client
-    .from('omie_produtos')
+    .from('listar_produtos')
     .select(
       'codigo,codigo_produto,codigo_produto_integracao,descricao,unidade,valor_unitario,marca,codigo_familia,inativo,bloqueado,tipo_item,ncm,ean,origem_mercadoria',
     )

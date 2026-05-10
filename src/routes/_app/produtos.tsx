@@ -3,12 +3,22 @@ import { useMemo, useState } from "react";
 import { BackToDashboard } from "@/components/app/BackToDashboard";
 import type { OmieProduto } from "@/integrations/supabase/erp-client";
 import { fetchProdutosAtivosFn } from "@/integrations/supabase/erp-server-fn";
-import { Package, RefreshCw, Search, AlertCircle } from "lucide-react";
+import { Package, RefreshCw, Search, AlertCircle, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
 
 export const Route = createFileRoute("/_app/produtos")({
   loader: () => fetchProdutosAtivosFn(),
   component: ProdutosPage,
 });
+
+type SortCol = keyof Pick<OmieProduto, "codigo_produto" | "codigo" | "descricao" | "codigo_familia" | "marca" | "unidade" | "tipo_item" | "estoque">;
+type SortDir = "asc" | "desc";
+
+function SortIcon({ col, sort }: { col: SortCol; sort: { col: SortCol; dir: SortDir } }) {
+  if (sort.col !== col) return <ChevronsUpDown className="inline ml-1 h-3 w-3 opacity-40" />;
+  return sort.dir === "asc"
+    ? <ChevronUp className="inline ml-1 h-3 w-3" />
+    : <ChevronDown className="inline ml-1 h-3 w-3" />;
+}
 
 function ProdutosPage() {
   const initial = Route.useLoaderData();
@@ -16,6 +26,11 @@ function ProdutosPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [q, setQ] = useState("");
+  const [sort, setSort] = useState<{ col: SortCol; dir: SortDir }>({ col: "descricao", dir: "asc" });
+
+  function toggleSort(col: SortCol) {
+    setSort((prev) => prev.col === col ? { col, dir: prev.dir === "asc" ? "desc" : "asc" } : { col, dir: "asc" });
+  }
 
   async function reload() {
     setLoading(true);
@@ -29,16 +44,35 @@ function ProdutosPage() {
     }
   }
 
-  const filtered = useMemo(
-    () =>
-      initial.filter((p) =>
-        [p.codigo ?? "", p.codigo_produto, p.descricao, p.marca ?? "", p.codigo_familia ?? ""]
-          .join(" ")
-          .toLowerCase()
-          .includes(q.toLowerCase()),
-      ),
-    [initial, q],
-  );
+  const filtered = useMemo(() => {
+    const list = initial.filter((p) =>
+      [p.codigo ?? "", p.codigo_produto, p.descricao, p.marca ?? "", p.codigo_familia ?? ""]
+        .join(" ")
+        .toLowerCase()
+        .includes(q.toLowerCase()),
+    );
+    return [...list].sort((a, b) => {
+      const av = a[sort.col] ?? "";
+      const bv = b[sort.col] ?? "";
+      const cmp =
+        typeof av === "number" && typeof bv === "number"
+          ? av - bv
+          : String(av).localeCompare(String(bv), "pt-BR", { numeric: true });
+      return sort.dir === "asc" ? cmp : -cmp;
+    });
+  }, [initial, q, sort]);
+
+  function Th({ col, label }: { col: SortCol; label: string }) {
+    return (
+      <th
+        className="px-4 py-3 text-left cursor-pointer select-none hover:text-foreground"
+        onClick={() => toggleSort(col)}
+      >
+        {label}
+        <SortIcon col={col} sort={sort} />
+      </th>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -81,20 +115,20 @@ function ProdutosPage() {
         <table className="w-full text-sm">
           <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
             <tr>
-              <th className="px-4 py-3 text-left">Cód. Interno</th>
-              <th className="px-4 py-3 text-left">Cód. VP</th>
-              <th className="px-4 py-3 text-left">Descrição</th>
-              <th className="px-4 py-3 text-left">Família</th>
-              <th className="px-4 py-3 text-left">Marca</th>
-              <th className="px-4 py-3 text-left">Un.</th>
-              <th className="px-4 py-3 text-left">Tipo</th>
-              <th className="px-4 py-3 text-right">Estoque</th>
+              <Th col="codigo_produto" label="Cód. Interno" />
+              <Th col="codigo" label="Cód. VP" />
+              <Th col="descricao" label="Descrição" />
+              <Th col="codigo_familia" label="Família" />
+              <Th col="marca" label="Marca" />
+              <Th col="unidade" label="Un." />
+              <Th col="tipo_item" label="Tipo" />
+              <Th col="estoque" label="Estoque" />
             </tr>
           </thead>
           <tbody className="divide-y">
             {!loading && !error &&
               filtered.map((p) => (
-                <tr key={p.codigo} className="hover:bg-muted/30">
+                <tr key={p.codigo_produto} className="hover:bg-muted/30">
                   <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{p.codigo_produto}</td>
                   <td className="px-4 py-3 font-mono text-xs">
                     {p.codigo ? (
