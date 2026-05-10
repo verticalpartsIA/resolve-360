@@ -1,11 +1,5 @@
 import { createServerFn } from '@tanstack/react-start';
+import { serverFetchClientesAtivos, serverFetchProdutosAtivos } from './erp-client.server';
 
-export const fetchClientesAtivosFn = createServerFn().handler(async () => {
-  const { serverFetchClientesAtivos } = await import('./erp-client.server');
-  return serverFetchClientesAtivos();
-});
-
-export const fetchProdutosAtivosFn = createServerFn().handler(async () => {
-  const { serverFetchProdutosAtivos } = await import('./erp-client.server');
-  return serverFetchProdutosAtivos();
-});
+export const fetchClientesAtivosFn = createServerFn().handler(serverFetchClientesAtivos);
+export const fetchProdutosAtivosFn = createServerFn().handler(serverFetchProdutosAtivos);
