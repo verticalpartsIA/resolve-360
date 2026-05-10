@@ -10,7 +10,7 @@ export const Route = createFileRoute("/_app/produtos")({
   component: ProdutosPage,
 });
 
-type SortCol = keyof Pick<OmieProduto, "codigo_produto" | "codigo" | "descricao" | "codigo_familia" | "marca" | "unidade" | "tipo_item" | "estoque">;
+type SortCol = "codigo_produto" | "codigo" | "descricao" | "marca" | "estoque";
 type SortDir = "asc" | "desc";
 
 function SortIcon({ col, sort }: { col: SortCol; sort: { col: SortCol; dir: SortDir } }) {
@@ -46,7 +46,7 @@ function ProdutosPage() {
 
   const filtered = useMemo(() => {
     const list = initial.filter((p) =>
-      [p.codigo ?? "", p.codigo_produto, p.descricao, p.marca ?? "", p.codigo_familia ?? ""]
+      [p.codigo_produto, p.codigo ?? "", p.descricao, p.marca ?? ""]
         .join(" ")
         .toLowerCase()
         .includes(q.toLowerCase()),
@@ -62,10 +62,10 @@ function ProdutosPage() {
     });
   }, [initial, q, sort]);
 
-  function Th({ col, label }: { col: SortCol; label: string }) {
+  function Th({ col, label, right }: { col: SortCol; label: string; right?: boolean }) {
     return (
       <th
-        className="px-4 py-3 text-left cursor-pointer select-none hover:text-foreground"
+        className={`px-4 py-3 cursor-pointer select-none hover:text-foreground ${right ? "text-right" : "text-left"}`}
         onClick={() => toggleSort(col)}
       >
         {label}
@@ -106,7 +106,7 @@ function ProdutosPage() {
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Buscar por código, descrição, marca ou família..."
+          placeholder="Buscar por código, descrição ou marca..."
           className="flex-1 bg-transparent text-sm outline-none"
         />
       </div>
@@ -115,14 +115,11 @@ function ProdutosPage() {
         <table className="w-full text-sm">
           <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
             <tr>
-              <Th col="codigo_produto" label="Cód. Interno" />
+              <Th col="codigo_produto" label="Cód. Omie" />
               <Th col="codigo" label="Cód. VP" />
               <Th col="descricao" label="Descrição" />
-              <Th col="codigo_familia" label="Família" />
               <Th col="marca" label="Marca" />
-              <Th col="unidade" label="Un." />
-              <Th col="tipo_item" label="Tipo" />
-              <Th col="estoque" label="Estoque" />
+              <Th col="estoque" label="Estoque" right />
             </tr>
           </thead>
           <tbody className="divide-y">
@@ -138,18 +135,7 @@ function ProdutosPage() {
                     )}
                   </td>
                   <td className="px-4 py-3 font-medium">{p.descricao}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{p.codigo_familia || "—"}</td>
                   <td className="px-4 py-3 text-muted-foreground">{p.marca || "—"}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{p.unidade || "—"}</td>
-                  <td className="px-4 py-3">
-                    {p.tipo_item ? (
-                      <span className="inline-flex rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
-                        {p.tipo_item}
-                      </span>
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </td>
                   <td className="px-4 py-3 text-right font-mono text-sm">
                     {p.estoque != null ? (
                       <span className={p.estoque > 0 ? "text-success font-semibold" : "text-destructive"}>
@@ -163,7 +149,7 @@ function ProdutosPage() {
               ))}
             {(loading || filtered.length === 0) && !error && (
               <tr>
-                <td colSpan={8} className="px-4 py-12 text-center text-sm text-muted-foreground">
+                <td colSpan={5} className="px-4 py-12 text-center text-sm text-muted-foreground">
                   <Package className="mx-auto mb-2 h-6 w-6 opacity-50" />
                   {loading
                     ? "Carregando produtos do ERP..."

@@ -64,11 +64,8 @@ export const fetchProdutosAtivosFn = createServerFn().handler(async (): Promise<
   const client = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
 
   const { data, error } = await client
-    .from('listar_produtos')
-    .select(
-      'codigo,codigo_produto,codigo_produto_integracao,descricao,unidade,valor_unitario,marca,codigo_familia,inativo,bloqueado,tipo_item,ncm,ean,origem_mercadoria',
-    )
-    .eq('inativo', false)
+    .from('PosVenda')
+    .select('codigo_omie,codigo_vp,descricao,marca,estoque')
     .order('descricao', { ascending: true });
 
   if (error) {
@@ -76,23 +73,21 @@ export const fetchProdutosAtivosFn = createServerFn().handler(async (): Promise<
     return [];
   }
 
-  const produtos = data ?? [];
-
-  const codigos = produtos.map((p) => p.codigo_produto).filter(Boolean);
-  const estoqueMap: Record<string, number | null> = {};
-  if (codigos.length > 0) {
-    const { data: saldos } = await client
-      .from('omie_estoque_saldos')
-      .select('codigo_produto,qtde_em_estoque,quantidade,disponivel')
-      .in('codigo_produto', codigos.slice(0, 500));
-    for (const s of saldos ?? []) {
-      estoqueMap[s.codigo_produto] =
-        (s.qtde_em_estoque ?? s.quantidade ?? s.disponivel) ?? null;
-    }
-  }
-
-  return produtos.map((p) => ({
-    ...(p as OmieProduto),
-    estoque: estoqueMap[p.codigo_produto] ?? null,
-  }));
+  return (data ?? []).map((p) => ({
+    codigo_produto: String(p.codigo_omie),
+    codigo: p.codigo_vp ?? null,
+    codigo_produto_integracao: null,
+    descricao: p.descricao ?? '',
+    unidade: null,
+    valor_unitario: null,
+    marca: p.marca ?? null,
+    codigo_familia: null,
+    inativo: false,
+    bloqueado: null,
+    tipo_item: null,
+    ncm: null,
+    ean: null,
+    origem_mercadoria: null,
+    estoque: (p.estoque as number | null) ?? null,
+  })) as OmieProduto[];
 });
