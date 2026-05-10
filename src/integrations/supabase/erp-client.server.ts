@@ -3,27 +3,23 @@
 import { createClient } from '@supabase/supabase-js';
 import type { OmieCliente, OmieProduto } from './erp-client';
 
-function createErpAdminClient() {
+function tryGetClient() {
   const url = process.env.ERP_URL;
   const key = process.env.ERP_SERVICE_KEY;
-
   if (!url || !key) {
-    throw new Error('[ERP] ERP_URL ou ERP_SERVICE_KEY não configurado no servidor');
+    console.warn('[ERP Server] ERP_URL ou ERP_SERVICE_KEY não configurado — retornando lista vazia');
+    return null;
   }
-
   return createClient(url, key, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 }
 
-let _client: ReturnType<typeof createErpAdminClient> | undefined;
-function getClient() {
-  if (!_client) _client = createErpAdminClient();
-  return _client;
-}
-
 export async function serverFetchClientesAtivos(): Promise<OmieCliente[]> {
-  const { data, error } = await getClient()
+  const client = tryGetClient();
+  if (!client) return [];
+
+  const { data, error } = await client
     .from('omie_crm_contas')
     .select('id,cnpj_cpf,nome,email,telefone,cidade,estado,inativo,segmento,updated_at')
     .eq('inativo', false)
@@ -37,7 +33,10 @@ export async function serverFetchClientesAtivos(): Promise<OmieCliente[]> {
 }
 
 export async function serverFetchProdutosAtivos(): Promise<OmieProduto[]> {
-  const { data, error } = await getClient()
+  const client = tryGetClient();
+  if (!client) return [];
+
+  const { data, error } = await client
     .from('omie_produtos')
     .select(
       'codigo,codigo_produto,descricao,unidade,valor_unitario,marca,codigo_familia,inativo,bloqueado,tipo_item,ncm,ean,origem_mercadoria',
