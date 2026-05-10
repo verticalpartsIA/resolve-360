@@ -1,0 +1,28 @@
+name: Sync OMIE → Clientes (bd_Omie)
+
+on:
+  schedule:
+    - cron: "0 */2 * * *"   # a cada 2 horas
+  workflow_dispatch:          # disparo manual
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Run sync
+        env:
+          OMIE_APP_KEY: ${{ secrets.OMIE_APP_KEY }}
+          OMIE_APP_SECRET: ${{ secrets.OMIE_APP_SECRET }}
+          ERP_URL: ${{ secrets.PROD_VITE_ERP_URL }}
+          ERP_SERVICE_KEY: ${{ secrets.PROD_ERP_SERVICE_KEY }}
+        run: bun run scripts/sync-omie-clientes.ts

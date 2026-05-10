@@ -15,21 +15,48 @@ function tryGetClient() {
   });
 }
 
+function telefoneStr(ddd?: string | null, num?: string | null): string | null {
+  if (!ddd && !num) return null;
+  return ddd ? `(${ddd}) ${num ?? ''}`.trim() : (num ?? null);
+}
+
+function segmentoFromTags(tags: unknown): string | null {
+  if (!Array.isArray(tags)) return null;
+  const outros = (tags as { tag: string }[])
+    .filter((t) => t.tag !== 'Cliente' && t.tag !== 'Fornecedor')
+    .map((t) => t.tag);
+  return outros.length > 0 ? outros.join(', ') : null;
+}
+
 export async function serverFetchClientesAtivos(): Promise<OmieCliente[]> {
   const client = tryGetClient();
   if (!client) return [];
 
   const { data, error } = await client
-    .from('omie_crm_contas')
-    .select('id,cnpj_cpf,nome,email,telefone,cidade,estado,inativo,segmento,updated_at')
+    .from('omie_customers')
+    .select(
+      'codigo_cliente_omie,cnpj_cpf,razao_social,email,telefone1_ddd,telefone1_numero,cidade,estado,inativo,tags,updated_at',
+    )
     .eq('inativo', false)
-    .order('nome', { ascending: true });
+    .order('razao_social', { ascending: true });
 
   if (error) {
     console.error('[ERP Server] Erro ao carregar clientes:', error.message);
     return [];
   }
-  return (data ?? []) as OmieCliente[];
+
+  return (data ?? []).map((row) => ({
+    id: String(row.codigo_cliente_omie),
+    cnpj_cpf: row.cnpj_cpf ?? '',
+    nome: row.razao_social ?? '',
+    email: row.email || null,
+    telefone: telefoneStr(row.telefone1_ddd, row.telefone1_numero),
+    cidade: row.cidade || null,
+    estado: row.estado || null,
+    inativo: row.inativo ?? false,
+    segmento: segmentoFromTags(row.tags),
+    updated_at: row.updated_at ?? null,
+  })) as OmieCliente[];
 }
 
 export async function serverFetchProdutosAtivos(): Promise<OmieProduto[]> {
