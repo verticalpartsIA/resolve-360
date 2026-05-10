@@ -69,12 +69,31 @@ export async function serverFetchProdutosAtivos(): Promise<OmieProduto[]> {
       'codigo,codigo_produto,codigo_produto_integracao,descricao,unidade,valor_unitario,marca,codigo_familia,inativo,bloqueado,tipo_item,ncm,ean,origem_mercadoria',
     )
     .eq('inativo', false)
-    .like('codigo_produto_integracao', 'VP%')
-    .order('codigo_produto_integracao', { ascending: true });
+    .order('descricao', { ascending: true });
 
   if (error) {
     console.error('[ERP Server] Erro ao carregar produtos:', error.message);
     return [];
   }
-  return (data ?? []) as OmieProduto[];
+
+  const produtos = data ?? [];
+
+  // Tenta buscar saldos de estoque (falha silenciosamente se a coluna não existir)
+  const codigos = produtos.map((p) => p.codigo_produto).filter(Boolean);
+  const estoqueMap: Record<string, number | null> = {};
+  if (codigos.length > 0) {
+    const { data: saldos } = await client
+      .from('omie_estoque_saldos')
+      .select('codigo_produto,qtde_em_estoque,quantidade,disponivel')
+      .in('codigo_produto', codigos);
+    for (const s of saldos ?? []) {
+      estoqueMap[s.codigo_produto] =
+        (s.qtde_em_estoque ?? s.quantidade ?? s.disponivel) ?? null;
+    }
+  }
+
+  return produtos.map((p) => ({
+    ...(p as OmieProduto),
+    estoque: estoqueMap[p.codigo_produto] ?? null,
+  }));
 }

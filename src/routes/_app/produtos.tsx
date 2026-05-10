@@ -81,19 +81,28 @@ function ProdutosPage() {
         <table className="w-full text-sm">
           <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
             <tr>
-              <th className="px-4 py-3 text-left">Código</th>
+              <th className="px-4 py-3 text-left">Cód. Interno</th>
+              <th className="px-4 py-3 text-left">Cód. VP</th>
               <th className="px-4 py-3 text-left">Descrição</th>
               <th className="px-4 py-3 text-left">Família</th>
               <th className="px-4 py-3 text-left">Marca</th>
               <th className="px-4 py-3 text-left">Un.</th>
               <th className="px-4 py-3 text-left">Tipo</th>
+              <th className="px-4 py-3 text-right">Estoque</th>
             </tr>
           </thead>
           <tbody className="divide-y">
             {!loading && !error &&
               filtered.map((p) => (
                 <tr key={p.codigo} className="hover:bg-muted/30">
-                  <td className="px-4 py-3 font-mono text-xs">{p.codigo_produto_integracao || p.codigo_produto || p.codigo}</td>
+                  <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{p.codigo_produto || p.codigo}</td>
+                  <td className="px-4 py-3 font-mono text-xs">
+                    {p.codigo_produto_integracao ? (
+                      <span className="font-semibold text-primary">{p.codigo_produto_integracao}</span>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </td>
                   <td className="px-4 py-3 font-medium">{p.descricao}</td>
                   <td className="px-4 py-3 text-muted-foreground">{p.codigo_familia || "—"}</td>
                   <td className="px-4 py-3 text-muted-foreground">{p.marca || "—"}</td>
@@ -107,11 +116,20 @@ function ProdutosPage() {
                       <span className="text-muted-foreground">—</span>
                     )}
                   </td>
+                  <td className="px-4 py-3 text-right font-mono text-sm">
+                    {p.estoque != null ? (
+                      <span className={p.estoque > 0 ? "text-success font-semibold" : "text-destructive"}>
+                        {p.estoque}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </td>
                 </tr>
               ))}
             {(loading || filtered.length === 0) && !error && (
               <tr>
-                <td colSpan={7} className="px-4 py-12 text-center text-sm text-muted-foreground">
+                <td colSpan={8} className="px-4 py-12 text-center text-sm text-muted-foreground">
                   <Package className="mx-auto mb-2 h-6 w-6 opacity-50" />
                   {loading
                     ? "Carregando produtos do ERP..."

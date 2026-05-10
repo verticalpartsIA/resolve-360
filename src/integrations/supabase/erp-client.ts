@@ -57,6 +57,7 @@ export type OmieProduto = {
   ncm: string | null;
   ean: string | null;
   origem_mercadoria: string | null;
+  estoque: number | null;
 };
 
 // Helpers de consulta
