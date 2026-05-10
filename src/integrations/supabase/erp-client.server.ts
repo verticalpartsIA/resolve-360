@@ -3,15 +3,13 @@
 import { createClient } from '@supabase/supabase-js';
 import type { OmieCliente, OmieProduto } from './erp-client';
 
-const ERP_URL_DEFAULT = 'https://kgecbycsyrtdhmdziuul.supabase.co';
+// Fallbacks embutidos: arquivo .server. nunca vai para o bundle do cliente.
+const ERP_URL_FB = 'https://kgecbycsyrtdhmdziuul.supabase.co';
+const ERP_KEY_FB = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtnZWNieWNzeXJ0ZGhtZHppdXVsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NzkyMzE5NiwiZXhwIjoyMDkzNDk5MTk2fQ.mF6ApvDd3dcxjZ1OEgYC86ShpIdMTIMNJCfbZYrX87o';
 
 function tryGetClient() {
-  const url = process.env.ERP_URL || ERP_URL_DEFAULT;
-  const key = process.env.ERP_SERVICE_KEY;
-  if (!key) {
-    console.warn('[ERP Server] ERP_SERVICE_KEY não configurado — retornando lista vazia');
-    return null;
-  }
+  const url = process.env.ERP_URL || ERP_URL_FB;
+  const key = process.env.ERP_SERVICE_KEY || ERP_KEY_FB;
   return createClient(url, key, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
