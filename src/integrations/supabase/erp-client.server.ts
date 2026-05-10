@@ -66,11 +66,11 @@ export async function serverFetchProdutosAtivos(): Promise<OmieProduto[]> {
   const { data, error } = await client
     .from('omie_produtos')
     .select(
-      'codigo,codigo_produto,descricao,unidade,valor_unitario,marca,codigo_familia,inativo,bloqueado,tipo_item,ncm,ean,origem_mercadoria',
+      'codigo,codigo_produto,codigo_produto_integracao,descricao,unidade,valor_unitario,marca,codigo_familia,inativo,bloqueado,tipo_item,ncm,ean,origem_mercadoria',
     )
     .eq('inativo', false)
-    .like('codigo_produto', 'VP%')
-    .order('codigo_produto', { ascending: true });
+    .like('codigo_produto_integracao', 'VP%')
+    .order('codigo_produto_integracao', { ascending: true });
 
   if (error) {
     console.error('[ERP Server] Erro ao carregar produtos:', error.message);

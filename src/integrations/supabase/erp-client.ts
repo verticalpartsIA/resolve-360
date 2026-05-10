@@ -45,6 +45,7 @@ export type OmieCliente = {
 export type OmieProduto = {
   codigo: string;
   codigo_produto: string;
+  codigo_produto_integracao: string | null;
   descricao: string;
   unidade: string | null;
   valor_unitario: number | null;

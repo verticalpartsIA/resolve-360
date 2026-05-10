@@ -97,7 +97,7 @@ function ProdutosPage() {
             {!loading && !error &&
               filtered.map((p) => (
                 <tr key={p.codigo} className="hover:bg-muted/30">
-                  <td className="px-4 py-3 font-mono text-xs">{p.codigo_produto || p.codigo}</td>
+                  <td className="px-4 py-3 font-mono text-xs">{p.codigo_produto_integracao || p.codigo_produto || p.codigo}</td>
                   <td className="px-4 py-3 font-medium">{p.descricao}</td>
                   <td className="px-4 py-3 text-muted-foreground">{p.codigo_familia || "—"}</td>
                   <td className="px-4 py-3 text-muted-foreground">{p.marca || "—"}</td>

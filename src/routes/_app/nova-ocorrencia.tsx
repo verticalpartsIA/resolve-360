@@ -113,7 +113,7 @@ function NewTicket() {
       .filter(
         (p) =>
           p.descricao.toLowerCase().includes(q) ||
-          (p.codigo_produto ?? p.codigo).toLowerCase().includes(q) ||
+          (p.codigo_produto_integracao ?? "").toLowerCase().includes(q) ||
           (p.marca ?? "").toLowerCase().includes(q),
       )
       .slice(0, 6);
@@ -143,7 +143,7 @@ function NewTicket() {
     setForm((f) => ({
       ...f,
       part: p.descricao,
-      partCode: p.codigo_produto ?? p.codigo,
+      partCode: p.codigo_produto_integracao ?? p.codigo_produto ?? p.codigo,
     }));
     setPartQuery(p.descricao);
     setShowPartSuggest(false);
