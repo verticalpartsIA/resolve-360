@@ -1,5 +1,4 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { createServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
 import { useStore } from "@/lib/store";
 import {
@@ -20,20 +19,20 @@ import {
   type InternalPriority,
 } from "@/lib/types";
 import type { OmieCliente, OmieProduto } from "@/integrations/supabase/erp-client";
-import { serverFetchClientesAtivos, serverFetchProdutosAtivos } from "@/integrations/supabase/erp-client.server";
 import { MessageCircle, FileEdit, Check, Bell, Mail, Phone, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const loadErpData = createServerFn().handler(async () => {
-  const [clientes, produtos] = await Promise.all([
-    serverFetchClientesAtivos(),
-    serverFetchProdutosAtivos(),
-  ]);
-  return { clientes, produtos };
-});
-
 export const Route = createFileRoute("/_app/nova-ocorrencia")({
-  loader: () => loadErpData(),
+  loader: async () => {
+    const { serverFetchClientesAtivos, serverFetchProdutosAtivos } = await import(
+      "@/integrations/supabase/erp-client.server"
+    );
+    const [clientes, produtos] = await Promise.all([
+      serverFetchClientesAtivos(),
+      serverFetchProdutosAtivos(),
+    ]);
+    return { clientes, produtos };
+  },
   component: NewTicket,
 });
 

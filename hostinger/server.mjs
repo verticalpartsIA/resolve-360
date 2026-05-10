@@ -5,18 +5,21 @@ import { fileURLToPath } from "node:url";
 import { Readable } from "node:stream";
 
 // Carrega .env — tenta o diretório do server.mjs e depois o cwd (Node 20.12+)
-const __envPaths = [
-  fileURLToPath(new URL(".env", import.meta.url)),
-  join(process.cwd(), ".env"),
-];
-for (const p of __envPaths) {
-  if (existsSync(p)) {
-    process.loadEnvFile(p);
-    console.log(`[env] Carregado: ${p}`);
-    break;
+try {
+  const __envPaths = [
+    fileURLToPath(new URL(".env", import.meta.url)),
+    join(process.cwd(), ".env"),
+  ];
+  for (const p of __envPaths) {
+    if (existsSync(p)) {
+      process.loadEnvFile(p);
+      console.log(`[env] Carregado: ${p}`);
+      break;
+    }
   }
+} catch (e) {
+  console.warn("[env] Falha ao carregar .env (continuando sem ele):", e.message);
 }
-console.log(`[env] ERP_SERVICE_KEY: ${process.env.ERP_SERVICE_KEY ? "OK" : "AUSENTE"}`);
 
 import app from "../dist/server/server.js";
 

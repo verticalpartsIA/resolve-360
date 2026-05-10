@@ -1,23 +1,22 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { createServerFn } from "@tanstack/react-start";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { BackToDashboard } from "@/components/app/BackToDashboard";
 import type { OmieProduto } from "@/integrations/supabase/erp-client";
-import { serverFetchProdutosAtivos } from "@/integrations/supabase/erp-client.server";
 import { Package, RefreshCw, Search, AlertCircle } from "lucide-react";
 
-const fetchProdutos = createServerFn().handler((): Promise<OmieProduto[]> =>
-  serverFetchProdutosAtivos(),
-);
-
 export const Route = createFileRoute("/_app/produtos")({
-  loader: () => fetchProdutos(),
+  loader: async () => {
+    const { serverFetchProdutosAtivos } = await import(
+      "@/integrations/supabase/erp-client.server"
+    );
+    return serverFetchProdutosAtivos();
+  },
   component: ProdutosPage,
 });
 
 function ProdutosPage() {
   const initial = Route.useLoaderData();
-  const [produtos, setProdutos] = useState<OmieProduto[]>(initial);
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [q, setQ] = useState("");
@@ -26,11 +25,9 @@ function ProdutosPage() {
     setLoading(true);
     setError(null);
     try {
-      const data = await fetchProdutos();
-      setProdutos(data);
-    } catch (e) {
+      await router.invalidate();
+    } catch {
       setError("Falha ao recarregar produtos do ERP.");
-      console.error("[Produtos ERP]", e);
     } finally {
       setLoading(false);
     }
@@ -38,13 +35,13 @@ function ProdutosPage() {
 
   const filtered = useMemo(
     () =>
-      produtos.filter((p) =>
+      initial.filter((p) =>
         [p.codigo, p.codigo_produto, p.descricao, p.marca ?? "", p.codigo_familia ?? ""]
           .join(" ")
           .toLowerCase()
           .includes(q.toLowerCase()),
       ),
-    [produtos, q],
+    [initial, q],
   );
 
   return (
@@ -55,7 +52,7 @@ function ProdutosPage() {
           <p className="text-xs font-medium uppercase tracking-[0.18em] text-gold">ERP · Omie</p>
           <h1 className="mt-1 text-2xl font-semibold sm:text-3xl">Produtos</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {loading ? "Carregando..." : `${produtos.length} produtos ativos sincronizados do ERP`}
+            {loading ? "Recarregando..." : `${initial.length} produtos ativos sincronizados do ERP`}
           </p>
         </div>
         <button
@@ -122,8 +119,8 @@ function ProdutosPage() {
                   <Package className="mx-auto mb-2 h-6 w-6 opacity-50" />
                   {loading
                     ? "Carregando produtos do ERP..."
-                    : produtos.length === 0
-                      ? "Nenhum produto ativo no ERP. Aguarde a sincronização com o Omie."
+                    : initial.length === 0
+                      ? "Nenhum produto ativo no ERP."
                       : "Nenhum produto encontrado para essa busca."}
                 </td>
               </tr>

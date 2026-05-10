@@ -1,23 +1,22 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { createServerFn } from "@tanstack/react-start";
+import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { BackToDashboard } from "@/components/app/BackToDashboard";
 import type { OmieCliente } from "@/integrations/supabase/erp-client";
-import { serverFetchClientesAtivos } from "@/integrations/supabase/erp-client.server";
 import { Building2, RefreshCw, Search, AlertCircle, ExternalLink } from "lucide-react";
 
-const fetchClientes = createServerFn().handler((): Promise<OmieCliente[]> =>
-  serverFetchClientesAtivos(),
-);
-
 export const Route = createFileRoute("/_app/clientes")({
-  loader: () => fetchClientes(),
+  loader: async () => {
+    const { serverFetchClientesAtivos } = await import(
+      "@/integrations/supabase/erp-client.server"
+    );
+    return serverFetchClientesAtivos();
+  },
   component: ClientesPage,
 });
 
 function ClientesPage() {
   const initial = Route.useLoaderData();
-  const [clientes, setClientes] = useState<OmieCliente[]>(initial);
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [q, setQ] = useState("");
@@ -26,11 +25,9 @@ function ClientesPage() {
     setLoading(true);
     setError(null);
     try {
-      const data = await fetchClientes();
-      setClientes(data);
-    } catch (e) {
+      await router.invalidate();
+    } catch {
       setError("Falha ao recarregar clientes do ERP.");
-      console.error("[Clientes ERP]", e);
     } finally {
       setLoading(false);
     }
@@ -38,13 +35,13 @@ function ClientesPage() {
 
   const filtered = useMemo(
     () =>
-      clientes.filter((c) =>
+      initial.filter((c) =>
         [c.cnpj_cpf, c.nome, c.email ?? "", c.cidade ?? "", c.estado ?? "", c.segmento ?? ""]
           .join(" ")
           .toLowerCase()
           .includes(q.toLowerCase()),
       ),
-    [clientes, q],
+    [initial, q],
   );
 
   return (
@@ -55,7 +52,7 @@ function ClientesPage() {
           <p className="text-xs font-medium uppercase tracking-[0.18em] text-gold">ERP · Omie</p>
           <h1 className="mt-1 text-2xl font-semibold sm:text-3xl">Clientes</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {loading ? "Carregando..." : `${clientes.length} clientes ativos sincronizados do ERP`}
+            {loading ? "Recarregando..." : `${initial.length} clientes ativos sincronizados do ERP`}
           </p>
         </div>
         <button
@@ -136,8 +133,8 @@ function ClientesPage() {
                   <Building2 className="mx-auto mb-2 h-6 w-6 opacity-50" />
                   {loading
                     ? "Carregando clientes do ERP..."
-                    : clientes.length === 0
-                      ? "Nenhum cliente ativo no ERP. Aguarde a sincronização com o Omie."
+                    : initial.length === 0
+                      ? "Nenhum cliente ativo no ERP."
                       : "Nenhum cliente encontrado para essa busca."}
                 </td>
               </tr>
