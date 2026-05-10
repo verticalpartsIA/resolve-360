@@ -4,6 +4,12 @@ import { join, extname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Readable } from "node:stream";
 
+// Carrega .env do mesmo diretório do server.mjs (Node 20.12+)
+const __envFile = new URL(".env", import.meta.url);
+if (existsSync(fileURLToPath(__envFile))) {
+  process.loadEnvFile(fileURLToPath(__envFile));
+}
+
 import app from "../dist/server/server.js";
 
 const port = Number(process.env.PORT || 3000);
