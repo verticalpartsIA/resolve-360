@@ -69,7 +69,8 @@ export async function serverFetchProdutosAtivos(): Promise<OmieProduto[]> {
       'codigo,codigo_produto,descricao,unidade,valor_unitario,marca,codigo_familia,inativo,bloqueado,tipo_item,ncm,ean,origem_mercadoria',
     )
     .eq('inativo', false)
-    .order('descricao', { ascending: true });
+    .like('codigo_produto', 'VP%')
+    .order('codigo_produto', { ascending: true });
 
   if (error) {
     console.error('[ERP Server] Erro ao carregar produtos:', error.message);
