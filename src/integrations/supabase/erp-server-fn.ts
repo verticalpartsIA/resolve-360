@@ -1,4 +1,4 @@
-import { createServerFn } from '@tanstack/start';
+import { createServerFn } from '@tanstack/react-start';
 
 export const fetchClientesAtivosFn = createServerFn().handler(async () => {
   const { serverFetchClientesAtivos } = await import('./erp-client.server');
