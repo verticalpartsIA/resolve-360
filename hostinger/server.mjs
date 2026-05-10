@@ -4,11 +4,19 @@ import { join, extname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Readable } from "node:stream";
 
-// Carrega .env do mesmo diretório do server.mjs (Node 20.12+)
-const __envFile = new URL(".env", import.meta.url);
-if (existsSync(fileURLToPath(__envFile))) {
-  process.loadEnvFile(fileURLToPath(__envFile));
+// Carrega .env — tenta o diretório do server.mjs e depois o cwd (Node 20.12+)
+const __envPaths = [
+  fileURLToPath(new URL(".env", import.meta.url)),
+  join(process.cwd(), ".env"),
+];
+for (const p of __envPaths) {
+  if (existsSync(p)) {
+    process.loadEnvFile(p);
+    console.log(`[env] Carregado: ${p}`);
+    break;
+  }
 }
+console.log(`[env] ERP_SERVICE_KEY: ${process.env.ERP_SERVICE_KEY ? "OK" : "AUSENTE"}`);
 
 import app from "../dist/server/server.js";
 
