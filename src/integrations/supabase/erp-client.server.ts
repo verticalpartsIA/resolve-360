@@ -3,11 +3,13 @@
 import { createClient } from '@supabase/supabase-js';
 import type { OmieCliente, OmieProduto } from './erp-client';
 
+const ERP_URL_DEFAULT = 'https://kgecbycsyrtdhmdziuul.supabase.co';
+
 function tryGetClient() {
-  const url = process.env.ERP_URL;
+  const url = process.env.ERP_URL || ERP_URL_DEFAULT;
   const key = process.env.ERP_SERVICE_KEY;
-  if (!url || !key) {
-    console.warn('[ERP Server] ERP_URL ou ERP_SERVICE_KEY não configurado — retornando lista vazia');
+  if (!key) {
+    console.warn('[ERP Server] ERP_SERVICE_KEY não configurado — retornando lista vazia');
     return null;
   }
   return createClient(url, key, {
