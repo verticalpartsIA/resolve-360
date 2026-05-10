@@ -69,7 +69,6 @@ export const fetchProdutosAtivosFn = createServerFn().handler(async (): Promise<
       'codigo,codigo_produto,codigo_produto_integracao,descricao,unidade,valor_unitario,marca,codigo_familia,inativo,bloqueado,tipo_item,ncm,ean,origem_mercadoria',
     )
     .eq('inativo', false)
-    .not('codigo_produto_integracao', 'is', null)
     .order('descricao', { ascending: true });
 
   if (error) {
