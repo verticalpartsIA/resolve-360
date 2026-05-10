@@ -19,17 +19,15 @@ import {
   type InternalPriority,
 } from "@/lib/types";
 import type { OmieCliente, OmieProduto } from "@/integrations/supabase/erp-client";
+import { fetchClientesAtivosFn, fetchProdutosAtivosFn } from "@/integrations/supabase/erp-server-fn";
 import { MessageCircle, FileEdit, Check, Bell, Mail, Phone, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app/nova-ocorrencia")({
   loader: async () => {
-    const { serverFetchClientesAtivos, serverFetchProdutosAtivos } = await import(
-      "@/integrations/supabase/erp-client.server"
-    );
     const [clientes, produtos] = await Promise.all([
-      serverFetchClientesAtivos(),
-      serverFetchProdutosAtivos(),
+      fetchClientesAtivosFn(),
+      fetchProdutosAtivosFn(),
     ]);
     return { clientes, produtos };
   },

@@ -2,15 +2,11 @@ import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { BackToDashboard } from "@/components/app/BackToDashboard";
 import type { OmieCliente } from "@/integrations/supabase/erp-client";
+import { fetchClientesAtivosFn } from "@/integrations/supabase/erp-server-fn";
 import { Building2, RefreshCw, Search, AlertCircle, ExternalLink } from "lucide-react";
 
 export const Route = createFileRoute("/_app/clientes")({
-  loader: async () => {
-    const { serverFetchClientesAtivos } = await import(
-      "@/integrations/supabase/erp-client.server"
-    );
-    return serverFetchClientesAtivos();
-  },
+  loader: () => fetchClientesAtivosFn(),
   component: ClientesPage,
 });
 

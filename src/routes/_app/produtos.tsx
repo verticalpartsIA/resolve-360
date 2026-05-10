@@ -2,15 +2,11 @@ import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { BackToDashboard } from "@/components/app/BackToDashboard";
 import type { OmieProduto } from "@/integrations/supabase/erp-client";
+import { fetchProdutosAtivosFn } from "@/integrations/supabase/erp-server-fn";
 import { Package, RefreshCw, Search, AlertCircle } from "lucide-react";
 
 export const Route = createFileRoute("/_app/produtos")({
-  loader: async () => {
-    const { serverFetchProdutosAtivos } = await import(
-      "@/integrations/supabase/erp-client.server"
-    );
-    return serverFetchProdutosAtivos();
-  },
+  loader: () => fetchProdutosAtivosFn(),
   component: ProdutosPage,
 });
 
