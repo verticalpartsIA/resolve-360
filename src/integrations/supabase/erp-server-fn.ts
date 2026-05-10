@@ -73,7 +73,12 @@ export const fetchProdutosAtivosFn = createServerFn().handler(async (): Promise<
     return [];
   }
 
-  return (data ?? []).map((p) => ({
+  return (data ?? [])
+    .filter((p) => {
+      const desc = (p.descricao ?? "").toUpperCase();
+      return !desc.startsWith("(NÃO USAR)") && !desc.startsWith("(NAO USAR)");
+    })
+    .map((p) => ({
     codigo_produto: String(p.codigo_omie),
     codigo: p.codigo_vp ?? null,
     codigo_produto_integracao: null,

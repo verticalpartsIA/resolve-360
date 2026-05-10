@@ -481,7 +481,7 @@ interface StoreCtx {
   internalTickets: InternalTicket[];
   npsRecords: NpsRecord[];
   currentUser: string;
-  createTicket: (i: NewTicketInput) => Ticket;
+  createTicket: (i: NewTicketInput) => Promise<Ticket>;
   updateStatus: (id: string, status: TicketStatus) => void;
   resolveTicket: (id: string, data: { rootCause: RootCause; justification: string; report: string }) => void;
   setNps: (id: string, score: number) => void;
@@ -564,105 +564,49 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   );
 
   const createTicket = useCallback<StoreCtx["createTicket"]>(
-    (input) => {
-      const createdAt = now();
-      const tempId = `temp-${uid()}`;
-      const tempCode = `VP-${new Date().getFullYear()}-${Date.now().toString().slice(-4)}`;
-      const optimistic: Ticket = {
-        id: tempId,
-        code: tempCode,
-        roNumber: tempCode,
-        emitente: input.emitente ?? currentUser,
-        dataEmissao: createdAt,
-        customer: input.customer,
-        customerDoc: input.customerDoc,
-        customerContato: input.customerContato,
-        customerTelefone: input.customerTelefone,
-        city: input.city,
-        state: input.state,
-        fornecedor: input.fornecedor,
-        part: input.part,
-        partCode: input.partCode,
-        vendedor: input.vendedor,
-        nfNumero: input.nfNumero,
-        nfValor: input.nfValor,
-        quantity: input.quantity,
-        unitValue: input.unitValue,
-        reason: input.reason,
-        occurrenceReason: input.occurrenceReason,
-        responsibleSector: input.responsibleSector,
-        origin: input.origin,
-        resolutionStatus: input.resolutionStatus,
-        acaoContencao: input.acaoContencao ?? [],
-        whatsappThreadId: input.whatsappThreadId,
-        dataLimiteAtendimento: new Date(Date.now() + input.slaHours * 60 * 60 * 1000).toISOString(),
-        channel: input.channel,
-        status: "aberto",
-        priority: input.priority,
-        slaHours: input.slaHours,
-        createdAt,
-        updatedAt: createdAt,
-        attachments: [],
-        audit: [
-          {
-            id: uid(),
-            at: createdAt,
-            actor: currentUser,
-            action: "ticket_created",
-          },
-        ],
-        assignee: currentUser,
-        internalTicketIds: [],
-      };
+    async (input) => {
+      const { data, error } = await supabase
+        .from("tickets")
+        .insert({
+          customer: input.customer,
+          customer_doc: input.customerDoc ?? null,
+          customer_contato: input.customerContato ?? null,
+          customer_telefone: input.customerTelefone ?? null,
+          city: input.city ?? null,
+          state: input.state ?? null,
+          fornecedor: input.fornecedor ?? null,
+          part: input.part,
+          part_code: input.partCode,
+          vendedor: input.vendedor ?? null,
+          nf_numero: input.nfNumero ?? null,
+          nf_valor: input.nfValor ?? null,
+          quantity: input.quantity ?? null,
+          unit_value: input.unitValue ?? null,
+          reason: input.reason,
+          occurrence_reason: denormalizeOccurrenceReason(input.occurrenceReason),
+          responsible_sector: denormalizeResponsibleSector(input.responsibleSector),
+          origin: input.origin ?? null,
+          resolution_status: input.resolutionStatus ?? null,
+          channel: input.channel,
+          priority: input.priority,
+          sla_hours: input.slaHours,
+          whatsapp_thread_id: input.whatsappThreadId ?? null,
+          acao_contencao: denormalizeContainmentActions(input.acaoContencao),
+          created_by: input.emitente ?? currentUser,
+          assigned_to: currentUser,
+        })
+        .select("*")
+        .single();
 
-      setTickets((prev) => [optimistic, ...prev]);
+      if (error) throw error;
 
-      void (async () => {
-        const { data, error } = await supabase
-          .from("tickets")
-          .insert({
-            customer: input.customer,
-            customer_doc: input.customerDoc ?? null,
-            customer_contato: input.customerContato ?? null,
-            customer_telefone: input.customerTelefone ?? null,
-            city: input.city ?? null,
-            state: input.state ?? null,
-            fornecedor: input.fornecedor ?? null,
-            part: input.part,
-            part_code: input.partCode,
-            vendedor: input.vendedor ?? null,
-            nf_numero: input.nfNumero ?? null,
-            nf_valor: input.nfValor ?? null,
-            quantity: input.quantity ?? null,
-            unit_value: input.unitValue ?? null,
-            reason: input.reason,
-            occurrence_reason: denormalizeOccurrenceReason(input.occurrenceReason),
-            responsible_sector: denormalizeResponsibleSector(input.responsibleSector),
-            origin: input.origin ?? null,
-            resolution_status: input.resolutionStatus ?? null,
-            channel: input.channel,
-            priority: input.priority,
-            sla_hours: input.slaHours,
-            whatsapp_thread_id: input.whatsappThreadId ?? null,
-            acao_contencao: denormalizeContainmentActions(input.acaoContencao),
-            created_by: input.emitente ?? currentUser,
-            assigned_to: currentUser,
-          })
-          .select("id")
-          .single();
+      await writeAudit("ticket", data.id, "ticket_created", {
+        detail: `Ticket criado por ${currentUser}`,
+      });
 
-        if (error) {
-          console.error("[Store] Failed to create ticket", error);
-          return;
-        }
+      void loadAll();
 
-        await writeAudit("ticket", data.id, "ticket_created", {
-          detail: `Ticket criado por ${currentUser}`,
-        });
-        await loadAll();
-      })();
-
-      return optimistic;
+      return mapTicket(data as TicketRow, [], []);
     },
     [currentUser, loadAll, writeAudit],
   );

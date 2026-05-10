@@ -87,6 +87,7 @@ function NewTicket() {
     slaHours: INTERNAL_DEFAULT_SLA.comercial,
   });
   const [err, setErr] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const [created, setCreated] = useState<{ ticketId: string; roNumber: string; internalCode?: string } | null>(null);
 
   // Autocomplete de clientes ERP
@@ -111,7 +112,8 @@ function NewTicket() {
       .filter(
         (p) =>
           p.descricao.toLowerCase().includes(q) ||
-          (p.codigo_produto_integracao ?? "").toLowerCase().includes(q) ||
+          (p.codigo ?? "").toLowerCase().includes(q) ||
+          (p.codigo_produto ?? "").toLowerCase().includes(q) ||
           (p.marca ?? "").toLowerCase().includes(q),
       )
       .slice(0, 6);
@@ -141,7 +143,7 @@ function NewTicket() {
     setForm((f) => ({
       ...f,
       part: p.descricao,
-      partCode: p.codigo_produto_integracao ?? p.codigo_produto ?? p.codigo,
+      partCode: p.codigo ?? p.codigo_produto,
     }));
     setPartQuery(p.descricao);
     setShowPartSuggest(false);
@@ -164,20 +166,30 @@ function NewTicket() {
     setStep((s) => Math.min(4, s + 1));
   }
 
-  function finalize() {
+  async function finalize() {
     setErr(null);
-    const t = createTicket({ ...form, channel, acaoContencao: contencao });
-    let internalCode: string | undefined;
-    if (openInternal && internal.subject) {
-      const it = createInternalTicket({
-        ...internal,
-        linkedOccurrenceId: t.id,
-        linkedCustomer: t.customer,
-      });
-      internalCode = it.code;
+    if (!form.customer) { setErr("Selecione um cliente antes de registrar."); return; }
+    if (!form.part || !form.partCode || !form.reason) { setErr("Preencha peça, código ERP e narrativa antes de registrar."); return; }
+    setSubmitting(true);
+    try {
+      const t = await createTicket({ ...form, channel, acaoContencao: contencao });
+      let internalCode: string | undefined;
+      if (openInternal && internal.subject) {
+        const it = createInternalTicket({
+          ...internal,
+          linkedOccurrenceId: t.id,
+          linkedCustomer: t.customer,
+        });
+        internalCode = it.code;
+      }
+      setCreated({ ticketId: t.id, roNumber: t.roNumber ?? t.code, internalCode });
+      setStep(4);
+    } catch (e) {
+      console.error("[nova-ocorrencia] finalize error", e);
+      setErr("Falha ao registrar a ocorrência. Verifique sua conexão e tente novamente.");
+    } finally {
+      setSubmitting(false);
     }
-    setCreated({ ticketId: t.id, roNumber: t.roNumber ?? t.code, internalCode });
-    setStep(4);
   }
 
   return (
@@ -195,17 +207,18 @@ function NewTicket() {
         {STEPS.map((s) => {
           const done = created ? true : step > s.n;
           const active = step === s.n;
-          const disabled = !!created;
+          const canClick = !created && s.n < step;
           return (
             <li key={s.n}>
               <button
                 type="button"
-                disabled={disabled}
-                onClick={() => !disabled && setStep(s.n)}
+                disabled={!canClick && !active}
+                onClick={() => canClick && setStep(s.n)}
                 className={cn(
                   "w-full rounded-lg border border-gold bg-card p-3 text-left transition hover:shadow-[var(--shadow-gold)] disabled:cursor-not-allowed disabled:opacity-60",
                   active && "shadow-[var(--shadow-gold)] ring-1 ring-gold",
                   done && !active && "border-success/60",
+                  s.n > step && !created && "opacity-50",
                 )}
               >
                 <div className="flex items-center gap-2">
@@ -528,7 +541,10 @@ function NewTicket() {
             {step < 4 ? (
               <button type="button" onClick={next} className="rounded-md bg-primary px-5 py-2 text-sm font-medium text-primary-foreground hover:opacity-90">Avançar</button>
             ) : (
-              <button type="button" onClick={finalize} className="rounded-md bg-gold px-5 py-2 text-sm font-semibold text-gold-foreground hover:opacity-90">Registrar ocorrência</button>
+              <button type="button" onClick={() => void finalize()} disabled={submitting} className="inline-flex items-center gap-2 rounded-md bg-gold px-5 py-2 text-sm font-semibold text-gold-foreground hover:opacity-90 disabled:opacity-60">
+                {submitting && <span className="h-4 w-4 animate-spin rounded-full border-2 border-gold-foreground border-t-transparent" />}
+                {submitting ? "Registrando..." : "Registrar ocorrência"}
+              </button>
             )}
           </div>
         )}

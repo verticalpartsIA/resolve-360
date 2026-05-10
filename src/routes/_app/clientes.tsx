@@ -1,4 +1,17 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
+
+function decodeHtml(str: string): string {
+  return str
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'");
+}
+function decodeHtmlFull(str: string): string {
+  // Apply twice to handle double-encoded entities (&amp;amp; → &amp; → &)
+  return decodeHtml(decodeHtml(str));
+}
 import { useMemo, useState } from "react";
 import { BackToDashboard } from "@/components/app/BackToDashboard";
 import type { OmieCliente } from "@/integrations/supabase/erp-client";
@@ -127,7 +140,7 @@ function ClientesPage() {
                 <tr key={c.id} className="hover:bg-muted/30">
                   <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{c.codigo_integracao || "—"}</td>
                   <td className="px-4 py-3 font-mono text-xs">{c.cnpj_cpf || "—"}</td>
-                  <td className="px-4 py-3 font-medium">{c.nome}</td>
+                  <td className="px-4 py-3 font-medium">{decodeHtmlFull(c.nome)}</td>
                   <td className="px-4 py-3 text-muted-foreground">
                     {[c.cidade, c.estado].filter(Boolean).join(" / ") || "—"}
                   </td>
