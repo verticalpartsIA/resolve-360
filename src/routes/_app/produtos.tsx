@@ -32,7 +32,7 @@ function ProdutosPage() {
   const filtered = useMemo(
     () =>
       initial.filter((p) =>
-        [p.codigo, p.codigo_produto, p.descricao, p.marca ?? "", p.codigo_familia ?? ""]
+        [p.codigo ?? "", p.codigo_produto, p.descricao, p.marca ?? "", p.codigo_familia ?? ""]
           .join(" ")
           .toLowerCase()
           .includes(q.toLowerCase()),
@@ -95,10 +95,10 @@ function ProdutosPage() {
             {!loading && !error &&
               filtered.map((p) => (
                 <tr key={p.codigo} className="hover:bg-muted/30">
-                  <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{p.codigo_produto || p.codigo}</td>
+                  <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{p.codigo_produto}</td>
                   <td className="px-4 py-3 font-mono text-xs">
-                    {p.codigo_produto_integracao ? (
-                      <span className="font-semibold text-primary">{p.codigo_produto_integracao}</span>
+                    {p.codigo ? (
+                      <span className="font-semibold text-primary">{p.codigo}</span>
                     ) : (
                       <span className="text-muted-foreground">—</span>
                     )}
