@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { createServerFn } from "@tanstack/react-start";
+import { useMemo, useState } from "react";
 import { useStore } from "@/lib/store";
 import {
   OCCURRENCE_REASON_LABEL,
@@ -18,11 +19,23 @@ import {
   type InternalDepartment,
   type InternalPriority,
 } from "@/lib/types";
-import { fetchClientesAtivos, fetchProdutosAtivos, type OmieCliente, type OmieProduto } from "@/integrations/supabase/erp-client";
-import { MessageCircle, FileEdit, Check, Bell, Mail, Phone, Search, Loader2 } from "lucide-react";
+import type { OmieCliente, OmieProduto } from "@/integrations/supabase/erp-client";
+import { serverFetchClientesAtivos, serverFetchProdutosAtivos } from "@/integrations/supabase/erp-client.server";
+import { MessageCircle, FileEdit, Check, Bell, Mail, Phone, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/_app/nova-ocorrencia")({ component: NewTicket });
+const loadErpData = createServerFn().handler(async () => {
+  const [clientes, produtos] = await Promise.all([
+    serverFetchClientesAtivos(),
+    serverFetchProdutosAtivos(),
+  ]);
+  return { clientes, produtos };
+});
+
+export const Route = createFileRoute("/_app/nova-ocorrencia")({
+  loader: () => loadErpData(),
+  component: NewTicket,
+});
 
 const STEPS = [
   { n: 1, title: "Triagem", desc: "Cliente e canal" },
@@ -32,32 +45,15 @@ const STEPS = [
 ] as const;
 
 function NewTicket() {
+  const { clientes: erpClientes, produtos: erpProdutos } = Route.useLoaderData();
   const { createTicket, createInternalTicket, tickets } = useStore();
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [channel, setChannel] = useState<TicketChannel>("manual");
   const [clientQuery, setClientQuery] = useState("");
   const [showSuggest, setShowSuggest] = useState(false);
-
-  // ERP data
-  const [erpClientes, setErpClientes] = useState<OmieCliente[]>([]);
-  const [erpProdutos, setErpProdutos] = useState<OmieProduto[]>([]);
-  const [erpLoading, setErpLoading] = useState(true);
   const [partQuery, setPartQuery] = useState("");
   const [showPartSuggest, setShowPartSuggest] = useState(false);
-
-  useEffect(() => {
-    void (async () => {
-      setErpLoading(true);
-      const [clientes, produtos] = await Promise.all([
-        fetchClientesAtivos(),
-        fetchProdutosAtivos(),
-      ]);
-      setErpClientes(clientes);
-      setErpProdutos(produtos);
-      setErpLoading(false);
-    })();
-  }, []);
 
   const [form, setForm] = useState({
     customer: "",
@@ -240,15 +236,14 @@ function NewTicket() {
             <Field label="Buscar cliente (nome, CNPJ/CPF ou telefone) *">
               <div className="relative">
                 <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                  {erpLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                  <Search className="h-4 w-4" />
                 </span>
                 <input
                   value={clientQuery}
                   onChange={(e) => { setClientQuery(e.target.value); setShowSuggest(true); }}
                   onFocus={() => setShowSuggest(true)}
-                  disabled={erpLoading}
                   className={cn(inputCls, "pl-9")}
-                  placeholder={erpLoading ? "Carregando clientes do ERP..." : "Ex: Empresa X, 12.345..., (11) 98877..."}
+                  placeholder="Ex: Empresa X, 12.345..., (11) 98877..."
                 />
                 {showSuggest && matches.length > 0 && (
                   <ul className="absolute z-10 mt-1 w-full overflow-hidden rounded-md border bg-popover shadow-lg">
@@ -264,7 +259,7 @@ function NewTicket() {
                     ))}
                   </ul>
                 )}
-                {showSuggest && !erpLoading && clientQuery.length >= 2 && matches.length === 0 && (
+                {showSuggest && clientQuery.length >= 2 && matches.length === 0 && (
                   <div className="absolute z-10 mt-1 w-full rounded-md border bg-popover px-3 py-2 text-xs text-muted-foreground shadow-lg">
                     Nenhum cliente encontrado. Verifique o nome ou CNPJ.
                   </div>
@@ -306,15 +301,14 @@ function NewTicket() {
                 <Field label="Buscar produto (descrição, código ou marca) *">
                   <div className="relative">
                     <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                      {erpLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                      <Search className="h-4 w-4" />
                     </span>
                     <input
                       value={partQuery}
                       onChange={(e) => { setPartQuery(e.target.value); setForm({ ...form, part: e.target.value, partCode: "" }); setShowPartSuggest(true); }}
                       onFocus={() => setShowPartSuggest(true)}
-                      disabled={erpLoading}
                       className={cn(inputCls, "pl-9")}
-                      placeholder={erpLoading ? "Carregando produtos do ERP..." : "Ex: Correia, AB-1234, SKF..."}
+                      placeholder="Ex: Correia, AB-1234, SKF..."
                     />
                     {showPartSuggest && partMatches.length > 0 && (
                       <ul className="absolute z-10 mt-1 w-full overflow-hidden rounded-md border bg-popover shadow-lg">

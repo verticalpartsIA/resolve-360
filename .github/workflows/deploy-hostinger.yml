@@ -97,11 +97,12 @@ jobs:
           script: |
             set -eu
             cd "${{ secrets.HOSTINGER_APP_DIR }}"
-            printf 'SUPABASE_URL=%s\nSUPABASE_PUBLISHABLE_KEY=%s\nSUPABASE_SERVICE_ROLE_KEY=%s\nERP_URL=%s\nERP_ANON_KEY=%s\n' \
+            printf 'SUPABASE_URL=%s\nSUPABASE_PUBLISHABLE_KEY=%s\nSUPABASE_SERVICE_ROLE_KEY=%s\nERP_URL=%s\nERP_SERVICE_KEY=%s\nERP_ANON_KEY=%s\n' \
               '${{ secrets.PROD_SUPABASE_URL }}' \
               '${{ secrets.PROD_SUPABASE_PUBLISHABLE_KEY }}' \
               '${{ secrets.PROD_SUPABASE_SERVICE_ROLE_KEY }}' \
               '${{ secrets.PROD_VITE_ERP_URL }}' \
+              '${{ secrets.PROD_ERP_SERVICE_KEY }}' \
               '${{ secrets.PROD_VITE_ERP_ANON_KEY }}' > .env
             npm install --omit=dev
             if [ -n "${{ secrets.HOSTINGER_RESTART_COMMAND }}" ]; then

@@ -1,32 +1,40 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { createServerFn } from "@tanstack/react-start";
+import { useMemo, useState } from "react";
 import { BackToDashboard } from "@/components/app/BackToDashboard";
-import { fetchClientesAtivos, type OmieCliente } from "@/integrations/supabase/erp-client";
+import type { OmieCliente } from "@/integrations/supabase/erp-client";
+import { serverFetchClientesAtivos } from "@/integrations/supabase/erp-client.server";
 import { Building2, RefreshCw, Search, AlertCircle, ExternalLink } from "lucide-react";
 
-export const Route = createFileRoute("/_app/clientes")({ component: ClientesPage });
+const fetchClientes = createServerFn().handler((): Promise<OmieCliente[]> =>
+  serverFetchClientesAtivos(),
+);
+
+export const Route = createFileRoute("/_app/clientes")({
+  loader: () => fetchClientes(),
+  component: ClientesPage,
+});
 
 function ClientesPage() {
-  const [clientes, setClientes] = useState<OmieCliente[]>([]);
-  const [loading, setLoading] = useState(true);
+  const initial = Route.useLoaderData();
+  const [clientes, setClientes] = useState<OmieCliente[]>(initial);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [q, setQ] = useState("");
 
-  async function load() {
+  async function reload() {
     setLoading(true);
     setError(null);
     try {
-      const data = await fetchClientesAtivos();
+      const data = await fetchClientes();
       setClientes(data);
     } catch (e) {
-      setError("Falha ao conectar ao ERP. Verifique as variáveis VITE_ERP_URL e VITE_ERP_ANON_KEY.");
+      setError("Falha ao recarregar clientes do ERP.");
       console.error("[Clientes ERP]", e);
     } finally {
       setLoading(false);
     }
   }
-
-  useEffect(() => { void load(); }, []);
 
   const filtered = useMemo(
     () =>
@@ -51,7 +59,7 @@ function ClientesPage() {
           </p>
         </div>
         <button
-          onClick={() => void load()}
+          onClick={() => void reload()}
           disabled={loading}
           className="inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm hover:bg-muted disabled:opacity-50"
         >
