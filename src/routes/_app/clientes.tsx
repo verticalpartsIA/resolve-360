@@ -81,7 +81,7 @@ function ClientesPage() {
         <table className="w-full text-sm">
           <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
             <tr>
-              <th className="px-4 py-3 text-left">Cód. Omie</th>
+              <th className="px-4 py-3 text-left">Cód. Integração</th>
               <th className="px-4 py-3 text-left">CNPJ / CPF</th>
               <th className="px-4 py-3 text-left">Razão Social</th>
               <th className="px-4 py-3 text-left">Cidade / UF</th>
@@ -94,7 +94,7 @@ function ClientesPage() {
             {!loading && !error &&
               filtered.map((c) => (
                 <tr key={c.id} className="hover:bg-muted/30">
-                  <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{c.id}</td>
+                  <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{c.codigo_integracao || "—"}</td>
                   <td className="px-4 py-3 font-mono text-xs">{c.cnpj_cpf || "—"}</td>
                   <td className="px-4 py-3 font-medium">{c.nome}</td>
                   <td className="px-4 py-3 text-muted-foreground">

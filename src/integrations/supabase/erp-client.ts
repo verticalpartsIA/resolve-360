@@ -31,6 +31,7 @@ export const erpClient = new Proxy({} as ReturnType<typeof createErpClient>, {
 
 export type OmieCliente = {
   id: string;
+  codigo_integracao: string | null;
   cnpj_cpf: string;
   nome: string;
   email: string | null;

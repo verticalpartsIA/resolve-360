@@ -35,9 +35,10 @@ export async function serverFetchClientesAtivos(): Promise<OmieCliente[]> {
   const { data, error } = await client
     .from('omie_customers')
     .select(
-      'codigo_cliente_omie,cnpj_cpf,razao_social,email,telefone1_ddd,telefone1_numero,cidade,estado,inativo,tags,updated_at',
+      'codigo_cliente_omie,codigo_cliente_integracao,cnpj_cpf,razao_social,email,telefone1_ddd,telefone1_numero,cidade,estado,inativo,tags,updated_at',
     )
     .eq('inativo', false)
+    .not('codigo_cliente_integracao', 'is', null)
     .order('razao_social', { ascending: true });
 
   if (error) {
@@ -47,6 +48,7 @@ export async function serverFetchClientesAtivos(): Promise<OmieCliente[]> {
 
   return (data ?? []).map((row) => ({
     id: String(row.codigo_cliente_omie),
+    codigo_integracao: row.codigo_cliente_integracao ?? null,
     cnpj_cpf: row.cnpj_cpf ?? '',
     nome: row.razao_social ?? '',
     email: row.email || null,
