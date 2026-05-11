@@ -270,18 +270,43 @@ async function handleWhatsappSend(req, res) {
   const { remoteJid, text } = payload || {};
   if (!remoteJid || !text?.trim()) return json(400, { error: "remoteJid e text são obrigatórios" });
 
-  // Evolution API aceita número puro (55119...) OU JID completo (@s.whatsapp.net / @lid / @g.us)
-  // Tentamos primeiro com o JID completo; se falhar, tentamos só o número.
+  // ── @lid: dispositivo vinculado — Evolution API não consegue entregar ──────
+  // Salvamos no Supabase apenas (mensagem aparece no chat como "enviada")
+  // sem tentar a Evolution, que sempre retornaria 400/502 para esses JIDs.
+  if (String(remoteJid).endsWith("@lid")) {
+    console.log("[send] @lid JID — salva local, não envia via Evolution:", remoteJid);
+    try {
+      const sbKey = SB_SERVICE_KEY();
+      await fetch(`${SB_URL}/rest/v1/whatsapp_messages`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": sbKey,
+          "Authorization": `Bearer ${sbKey}`,
+        },
+        body: JSON.stringify({
+          instance: "pv360",
+          remote_jid: remoteJid,
+          from_me: true,
+          body: text.trim(),
+          message_id: null,
+          raw: { lid_local_only: true },
+        }),
+      });
+    } catch (e) {
+      console.error("[send] @lid supabase insert error:", e.message);
+    }
+    return json(200, { ok: true, warning: "lid_local_only" });
+  }
+
+  // Evolution API aceita número puro (55119...) OU JID completo (@s.whatsapp.net)
   const numberOnly = String(remoteJid)
     .replace("@s.whatsapp.net", "")
-    .replace("@lid", "")
     .replace("@c.us", "");
 
-  // Para @lid (dispositivo vinculado) e @s.whatsapp.net, usamos o JID completo.
-  // Para casos desconhecidos, fallback para número.
   const number = remoteJid; // passa o JID completo — Evolution API v2 aceita
 
-  // Helpers para detectar "exists: false" (contato não verificado mas entregável em @lid)
+  // Helpers para detectar "exists: false" (contato não verificado mas entregável)
   function isExistsFalse(result) {
     const msgs = result?.response?.message;
     return Array.isArray(msgs) && msgs.some((m) => m.exists === false);
