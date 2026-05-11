@@ -306,7 +306,7 @@ async function handleWhatsappSend(req, res) {
 
   const number = remoteJid; // passa o JID completo — Evolution API v2 aceita
 
-  // Helpers para detectar "exists: false"
+  // Helpers para detectar "exists: false" (contato não verificado mas entregável)
   function isExistsFalse(result) {
     const msgs = result?.response?.message;
     return Array.isArray(msgs) && msgs.some((m) => m.exists === false);
@@ -314,7 +314,7 @@ async function handleWhatsappSend(req, res) {
 
   // 1. Envia via Evolution API
   let evResult = {};
-  let bestEffort = false;
+  let bestEffort = false; // true quando Evolution retorna exists:false mas pode ter entregado
   try {
     const r = await fetch(`http://72.61.48.156:8080/message/sendText/pv360`, {
       method: "POST",
