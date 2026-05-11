@@ -133,9 +133,10 @@ async function handleWhatsappWebhook(req, res) {
     console.error("[webhook] whatsapp_messages error:", e.message);
   }
 
-  // ── Automações (mensagens recebidas de clientes) ──────────────────────────
-  if (!fromMe && bodyText) {
-    // Roda em background — não bloqueia a resposta ao webhook
+  // ── Automações (apenas mensagens de clientes externos @s.whatsapp.net) ────
+  // @lid = dispositivo vinculado interno, @g.us = grupos — ambos ignorados aqui
+  const isExternalCustomer = !fromMe && bodyText && remoteJid.endsWith("@s.whatsapp.net");
+  if (isExternalCustomer) {
     automateIncoming({ remoteJid, pushName, displayBody, insertedId }).catch((e) =>
       console.error("[automate] erro geral:", e.message),
     );
