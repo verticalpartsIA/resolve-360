@@ -13,6 +13,8 @@ const SB_URL          = "https://jkbklzlbhhfnamaeislb.supabase.co";
 const SB_SERVICE_KEY  = () =>
   process.env.SUPABASE_SERVICE_ROLE_KEY ||
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImprYmtsemxiaGhmbmFtYWVpc2xiIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3Nzc5MDM5MywiZXhwIjoyMDkzMzY2MzkzfQ.WoFDfpykUrwQcg0uzDwgfKSwWCy-7zrrJGWGOpo5drs";
+const OPENAI_KEY      = () => process.env.OPENAI_API_KEY || "";
+const NOTIFY_URL      = () => process.env.NOTIFY_WEBHOOK_URL || ""; // n8n / Slack / Telegram
 
 const OPEN_STATUSES = ["aberto","em_atendimento","aguardando_cliente","aguardando_interno"];
 
@@ -131,41 +133,196 @@ async function handleWhatsappWebhook(req, res) {
     console.error("[webhook] whatsapp_messages error:", e.message);
   }
 
-  // 2. Tenta vincular a ticket aberto
-  if (!fromMe) {
-    try {
-      const statusFilter = OPEN_STATUSES.map(s => `"${s}"`).join(",");
-      const r = await sbFetch(
-        `/rest/v1/tickets?select=id,code&whatsapp_thread_id=eq.${encodeURIComponent(remoteJid)}&status=in.(${statusFilter})&order=created_at.desc&limit=1`,
-      );
-      if (r.ok) {
-        const tickets = await r.json();
-        if (tickets.length > 0) {
-          const ticket = tickets[0];
-
-          if (insertedId) {
-            await sbFetch(`/rest/v1/whatsapp_messages?id=eq.${insertedId}`, {
-              method: "PATCH",
-              body: JSON.stringify({ ticket_id: ticket.id }),
-            });
-          }
-
-          const mr = await sbFetch("/rest/v1/ticket_messages", {
-            method: "POST",
-            body: JSON.stringify({ ticket_id: ticket.id, kind: "whatsapp",
-              author_name: pushName || remoteJid.replace("@s.whatsapp.net", ""),
-              body: displayBody }),
-          });
-          if (mr.ok) console.log(`[webhook] mensagem linkada ao ticket ${ticket.code}`);
-          else console.error("[webhook] ticket_messages error:", await mr.text());
-        }
-      }
-    } catch (e) {
-      console.error("[webhook] ticket link error:", e.message);
-    }
+  // ── Automações (mensagens recebidas de clientes) ──────────────────────────
+  if (!fromMe && bodyText) {
+    // Roda em background — não bloqueia a resposta ao webhook
+    automateIncoming({ remoteJid, pushName, displayBody, insertedId }).catch((e) =>
+      console.error("[automate] erro geral:", e.message),
+    );
   }
 
   return json(200, { ok: true });
+}
+
+// ─── Pipeline de automação ────────────────────────────────────────────────────
+async function automateIncoming({ remoteJid, pushName, displayBody, insertedId }) {
+  const phone = remoteJid.replace("@s.whatsapp.net", "").replace("@c.us", "");
+  const contactName = pushName || phone;
+
+  // ── A. Busca ticket aberto existente ──────────────────────────────────────
+  const statusFilter = OPEN_STATUSES.map(s => `"${s}"`).join(",");
+  let openTicket = null;
+  try {
+    const r = await sbFetch(
+      `/rest/v1/tickets?select=id,code&whatsapp_thread_id=eq.${encodeURIComponent(remoteJid)}&status=in.(${statusFilter})&order=created_at.desc&limit=1`,
+    );
+    if (r.ok) {
+      const rows = await r.json();
+      if (rows.length > 0) openTicket = rows[0];
+    }
+  } catch (e) { console.error("[automate] ticket search error:", e.message); }
+
+  // ── B. Verifica se é a primeira mensagem desta thread ────────────────────
+  let isFirstMessage = false;
+  try {
+    const r = await sbFetch(
+      `/rest/v1/whatsapp_messages?select=id&remote_jid=eq.${encodeURIComponent(remoteJid)}&from_me=eq.false&order=created_at.asc&limit=2`,
+    );
+    if (r.ok) {
+      const rows = await r.json();
+      // É primeira se existe exatamente 1 mensagem recebida (a que acabou de chegar)
+      isFirstMessage = rows.length <= 1;
+    }
+  } catch (e) { console.error("[automate] first-message check error:", e.message); }
+
+  // ── C. Cria ticket automático se não há nenhum aberto ────────────────────
+  if (!openTicket) {
+    try {
+      const r = await sbFetch("/rest/v1/tickets", {
+        method: "POST",
+        body: JSON.stringify({
+          customer:        contactName,
+          customer_telefone: phone,
+          part:            "WhatsApp — aguardando triagem",
+          part_code:       "WA-AUTO",
+          reason:          displayBody.slice(0, 500),
+          occurrence_reason: "outro",
+          channel:         "whatsapp",
+          status:          "aberto",
+          priority:        "media",
+          whatsapp_thread_id: remoteJid,
+        }),
+      });
+      if (r.ok) {
+        const rows = await r.json();
+        openTicket = Array.isArray(rows) ? rows[0] : rows;
+        console.log(`[automate] ticket criado: ${openTicket?.code}`);
+      } else {
+        console.error("[automate] ticket create error:", await r.text());
+      }
+    } catch (e) { console.error("[automate] ticket create exception:", e.message); }
+  }
+
+  // ── D. Vincula mensagem ao ticket ────────────────────────────────────────
+  if (openTicket) {
+    if (insertedId) {
+      await sbFetch(`/rest/v1/whatsapp_messages?id=eq.${insertedId}`, {
+        method: "PATCH",
+        body: JSON.stringify({ ticket_id: openTicket.id }),
+      }).catch((e) => console.error("[automate] wa_msg patch error:", e.message));
+    }
+    await sbFetch("/rest/v1/ticket_messages", {
+      method: "POST",
+      body: JSON.stringify({
+        ticket_id:   openTicket.id,
+        kind:        "whatsapp",
+        author_name: contactName,
+        body:        displayBody,
+      }),
+    }).catch((e) => console.error("[automate] ticket_msg error:", e.message));
+  }
+
+  // ── E. Primeira resposta automática (com IA se OPENAI_API_KEY estiver set) ─
+  if (isFirstMessage) {
+    const replyText = await generateFirstReply(contactName, displayBody);
+    try {
+      // Envia via Evolution API
+      await fetch(`http://72.61.48.156:8080/message/sendText/pv360`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", apikey: WH_APIKEY() },
+        body: JSON.stringify({ number: remoteJid, text: replyText }),
+      });
+      // Salva resposta automática no Supabase
+      const srRes = await sbFetch("/rest/v1/whatsapp_messages", {
+        method: "POST",
+        body: JSON.stringify({
+          instance: "pv360",
+          remote_jid: remoteJid,
+          from_me: true,
+          body: replyText,
+          raw: { auto_reply: true },
+        }),
+      });
+      // Salva também no ticket
+      if (openTicket && srRes.ok) {
+        await sbFetch("/rest/v1/ticket_messages", {
+          method: "POST",
+          body: JSON.stringify({
+            ticket_id:   openTicket.id,
+            kind:        "whatsapp",
+            author_name: "Bot pv360",
+            body:        replyText,
+          }),
+        }).catch(() => {});
+      }
+      console.log("[automate] primeira resposta enviada");
+    } catch (e) { console.error("[automate] first-reply send error:", e.message); }
+  }
+
+  // ── F. Notificação para o time ────────────────────────────────────────────
+  const notifyUrl = NOTIFY_URL();
+  if (notifyUrl) {
+    fetch(notifyUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        event:       "nova_mensagem_whatsapp",
+        contact:     contactName,
+        phone,
+        message:     displayBody,
+        ticket_code: openTicket?.code ?? null,
+        thread_url:  `https://aliceblue-dove-844629.hostingersite.com/thread/${encodeURIComponent(remoteJid)}`,
+        is_first:    isFirstMessage,
+        timestamp:   new Date().toISOString(),
+      }),
+    }).catch((e) => console.error("[automate] notify error:", e.message));
+  }
+}
+
+// ─── Geração da primeira resposta (IA ou fallback fixo) ───────────────────────
+async function generateFirstReply(contactName, messageBody) {
+  const openaiKey = OPENAI_KEY();
+  if (!openaiKey) {
+    // Texto fixo quando não há chave de IA configurada
+    return `Olá${contactName ? ", " + contactName.split(" ")[0] : ""}! 👋\n\nRecebemos sua mensagem e em breve um de nossos atendentes irá retornar.\n\nHorário de atendimento: segunda a sexta, das 8h às 18h.\n\nObrigado! 🙏`;
+  }
+
+  try {
+    const r = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${openaiKey}`,
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        max_tokens: 200,
+        messages: [
+          {
+            role: "system",
+            content:
+              "Você é o assistente de atendimento da VerticalParts (pós-venda de peças industriais). " +
+              "Responda APENAS com a mensagem de boas-vindas para o cliente, em português, " +
+              "de forma cordial e profissional, em 2-3 linhas. " +
+              "Mencione que um atendente irá retornar em breve. Não use markdown, só texto simples.",
+          },
+          {
+            role: "user",
+            content: `Cliente: ${contactName}\nMensagem recebida: "${messageBody}"\n\nGere a resposta de boas-vindas.`,
+          },
+        ],
+      }),
+    });
+    if (r.ok) {
+      const data = await r.json();
+      return data.choices?.[0]?.message?.content?.trim() ||
+        `Olá, ${contactName}! Recebemos sua mensagem. Em breve retornamos. 🙏`;
+    }
+  } catch (e) {
+    console.error("[automate] openai error:", e.message);
+  }
+
+  return `Olá, ${contactName.split(" ")[0]}! Recebemos sua mensagem e em breve um atendente irá retornar. 🙏`;
 }
 
 // Carrega .env — tenta o diretório do server.mjs e depois o cwd (Node 20.12+)
