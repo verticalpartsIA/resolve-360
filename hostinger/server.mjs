@@ -327,12 +327,18 @@ async function generateFirstReply(contactName, messageBody) {
   return `Olá, ${contactName.split(" ")[0]}! Recebemos sua mensagem e em breve um atendente irá retornar. 🙏`;
 }
 
-// Carrega .env — tenta o diretório do server.mjs e depois o cwd (Node 20.12+)
+// Carrega .env — busca em múltiplos locais, do mais específico ao mais geral.
+// O Hostinger limpa a pasta nodejs/ a cada redeploy, então o .env persistente
+// deve ficar na pasta HOME (/home/u969661049/) ou no pai da pasta do app.
 try {
+  const homeDir = process.env.HOME || process.env.USERPROFILE || "";
   const __envPaths = [
-    fileURLToPath(new URL(".env", import.meta.url)),
-    join(process.cwd(), ".env"),
-  ];
+    fileURLToPath(new URL(".env", import.meta.url)), // mesmo dir do server.mjs
+    join(process.cwd(), ".env"),                      // raiz do app (nodejs/)
+    join(process.cwd(), "..", ".env"),                // pasta pai (HOME/)
+    homeDir ? join(homeDir, ".env") : null,           // $HOME/.env
+    homeDir ? join(homeDir, "posvenda360.env") : null,// $HOME/posvenda360.env
+  ].filter(Boolean);
   for (const p of __envPaths) {
     if (existsSync(p)) {
       process.loadEnvFile(p);
