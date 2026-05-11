@@ -102,6 +102,7 @@ function WhatsappThreads() {
     if (error) {
       console.error("[threads] load error:", error.message);
       setOnline(false);
+      setLoading(false);
       return;
     }
     setOnline(true);
