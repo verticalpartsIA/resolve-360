@@ -1,7 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { sendWhatsappMessage } from "@/lib/wa-server";
 import { cn } from "@/lib/utils";
 import {
   ArrowLeft,
@@ -133,7 +132,15 @@ function ThreadView() {
     setText("");
 
     try {
-      await sendWhatsappMessage({ data: { remoteJid, text: body } });
+      const r = await fetch("/api/whatsapp/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ remoteJid, text: body }),
+      });
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({}));
+        throw new Error((err as { error?: string }).error ?? "Erro ao enviar");
+      }
     } catch (e) {
       setSendError(e instanceof Error ? e.message : "Erro ao enviar");
       setMessages((prev) => prev.filter((m) => m.id !== optimistic.id));

@@ -240,6 +240,85 @@ function toBody(req) {
   return Readable.toWeb(req);
 }
 
+// ─── /api/whatsapp/send ────────────────────────────────────────────────────────
+// Envia mensagem de texto via Evolution API e salva em whatsapp_messages.
+// Body: { remoteJid: string, text: string }
+// Header: Authorization: Bearer <SUPABASE_ANON_KEY>  (validado no servidor)
+
+async function handleWhatsappSend(req, res) {
+  const json = (status, obj) => {
+    res.statusCode = status;
+    res.setHeader("Content-Type", "application/json");
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.end(JSON.stringify(obj));
+  };
+
+  if (req.method === "OPTIONS") {
+    res.statusCode = 204;
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    return res.end();
+  }
+
+  if (req.method !== "POST") return json(405, { error: "Method Not Allowed" });
+
+  let payload;
+  try { payload = JSON.parse(await readBody(req)); }
+  catch { return json(400, { error: "Invalid JSON" }); }
+
+  const { remoteJid, text } = payload || {};
+  if (!remoteJid || !text?.trim()) return json(400, { error: "remoteJid e text são obrigatórios" });
+
+  const number = String(remoteJid)
+    .replace("@s.whatsapp.net", "")
+    .replace("@lid", "")
+    .replace("@c.us", "");
+
+  // 1. Envia via Evolution API
+  let evResult = {};
+  try {
+    const r = await fetch(`http://72.61.48.156:8080/message/sendText/pv360`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: WH_APIKEY() },
+      body: JSON.stringify({ number, text: text.trim() }),
+    });
+    evResult = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      console.error("[send] Evolution error:", evResult);
+      return json(502, { error: "Falha ao enviar via Evolution API", detail: evResult });
+    }
+  } catch (e) {
+    return json(502, { error: "Evolution API indisponível", detail: e.message });
+  }
+
+  // 2. Salva em whatsapp_messages
+  const msgKey = evResult?.key;
+  try {
+    const sbKey = SB_SERVICE_KEY();
+    await fetch(`${SB_URL}/rest/v1/whatsapp_messages`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": sbKey,
+        "Authorization": `Bearer ${sbKey}`,
+      },
+      body: JSON.stringify({
+        instance: "pv360",
+        remote_jid: remoteJid,
+        from_me: true,
+        body: text.trim(),
+        message_id: msgKey?.id ?? null,
+        raw: evResult,
+      }),
+    });
+  } catch (e) {
+    console.error("[send] supabase insert error:", e.message);
+  }
+
+  return json(200, { ok: true, key: msgKey });
+}
+
 const server = http.createServer(async (req, res) => {
   try {
     const urlPath = new URL(req.url || "/", "http://localhost").pathname;
@@ -247,6 +326,10 @@ const server = http.createServer(async (req, res) => {
     // ── API routes interceptadas antes do TanStack ──
     if (urlPath === "/api/whatsapp/webhook") {
       await handleWhatsappWebhook(req, res);
+      return;
+    }
+    if (urlPath === "/api/whatsapp/send") {
+      await handleWhatsappSend(req, res);
       return;
     }
 
