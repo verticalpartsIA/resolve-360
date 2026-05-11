@@ -163,16 +163,17 @@ async function automateIncoming({ remoteJid, pushName, displayBody, insertedId }
     }
   } catch (e) { console.error("[automate] ticket search error:", e.message); }
 
-  // ── B. Verifica se é a primeira mensagem desta thread ────────────────────
+  // ── B. Verifica se já foi enviada resposta automática para este JID ────────
+  // Usamos raw->auto_reply para não disparar duas vezes em testes repetidos
   let isFirstMessage = false;
   try {
     const r = await sbFetch(
-      `/rest/v1/whatsapp_messages?select=id&remote_jid=eq.${encodeURIComponent(remoteJid)}&from_me=eq.false&order=created_at.asc&limit=2`,
+      `/rest/v1/whatsapp_messages?select=id&remote_jid=eq.${encodeURIComponent(remoteJid)}&from_me=eq.true&raw->>auto_reply=eq.true&limit=1`,
     );
     if (r.ok) {
       const rows = await r.json();
-      // É primeira se existe exatamente 1 mensagem recebida (a que acabou de chegar)
-      isFirstMessage = rows.length <= 1;
+      // Envia resposta automática apenas se nunca foi enviada antes para este JID
+      isFirstMessage = rows.length === 0;
     }
   } catch (e) { console.error("[automate] first-message check error:", e.message); }
 
@@ -546,6 +547,21 @@ const server = http.createServer(async (req, res) => {
     const urlPath = new URL(req.url || "/", "http://localhost").pathname;
 
     // ── API routes interceptadas antes do TanStack ──
+    if (urlPath === "/api/whatsapp/status") {
+      res.statusCode = 200;
+      res.setHeader("Content-Type", "application/json");
+      const oaiKey = OPENAI_KEY();
+      const notifyUrl = NOTIFY_URL();
+      res.end(JSON.stringify({
+        openai_key_set: oaiKey.length > 0,
+        openai_key_prefix: oaiKey ? oaiKey.slice(0, 12) + "..." : null,
+        notify_url_set: notifyUrl.length > 0,
+        evolution_apikey: WH_APIKEY().slice(0, 4) + "...",
+        env_file_loaded: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+        ts: new Date().toISOString(),
+      }));
+      return;
+    }
     if (urlPath === "/api/whatsapp/webhook") {
       await handleWhatsappWebhook(req, res);
       return;
