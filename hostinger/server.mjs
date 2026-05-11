@@ -281,8 +281,15 @@ async function handleWhatsappSend(req, res) {
   // Para casos desconhecidos, fallback para número.
   const number = remoteJid; // passa o JID completo — Evolution API v2 aceita
 
+  // Helpers para detectar "exists: false" (contato não verificado mas entregável em @lid)
+  function isExistsFalse(result) {
+    const msgs = result?.response?.message;
+    return Array.isArray(msgs) && msgs.some((m) => m.exists === false);
+  }
+
   // 1. Envia via Evolution API
   let evResult = {};
+  let bestEffort = false; // true quando Evolution retorna exists:false mas pode ter entregado
   try {
     const r = await fetch(`http://72.61.48.156:8080/message/sendText/pv360`, {
       method: "POST",
@@ -291,22 +298,34 @@ async function handleWhatsappSend(req, res) {
     });
     evResult = await r.json().catch(() => ({}));
 
-    // Se falhou com JID completo, tenta com número puro
-    if (!r.ok && numberOnly !== remoteJid) {
-      console.warn("[send] JID falhou, tentando número puro:", numberOnly);
-      const r2 = await fetch(`http://72.61.48.156:8080/message/sendText/pv360`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", apikey: WH_APIKEY() },
-        body: JSON.stringify({ number: numberOnly, text: text.trim() }),
-      });
-      evResult = await r2.json().catch(() => ({}));
-      if (!r2.ok) {
-        console.error("[send] Evolution error (ambos falharam):", evResult);
+    if (!r.ok) {
+      // Se a Evolution respondeu "exists: false", é um @lid não verificável
+      // mas a mensagem pode ter sido entregue via dispositivo vinculado.
+      if (isExistsFalse(evResult)) {
+        console.warn("[send] Evolution: exists=false para JID", remoteJid, "— tratando como best-effort");
+        bestEffort = true;
+      } else if (numberOnly !== remoteJid) {
+        // Tenta com número puro como fallback
+        console.warn("[send] JID falhou, tentando número puro:", numberOnly);
+        const r2 = await fetch(`http://72.61.48.156:8080/message/sendText/pv360`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", apikey: WH_APIKEY() },
+          body: JSON.stringify({ number: numberOnly, text: text.trim() }),
+        });
+        evResult = await r2.json().catch(() => ({}));
+        if (!r2.ok) {
+          if (isExistsFalse(evResult)) {
+            console.warn("[send] Fallback também retornou exists=false — best-effort");
+            bestEffort = true;
+          } else {
+            console.error("[send] Evolution error (ambos falharam):", evResult);
+            return json(502, { error: "Falha ao enviar via Evolution API", detail: evResult });
+          }
+        }
+      } else {
+        console.error("[send] Evolution error:", evResult);
         return json(502, { error: "Falha ao enviar via Evolution API", detail: evResult });
       }
-    } else if (!r.ok) {
-      console.error("[send] Evolution error:", evResult);
-      return json(502, { error: "Falha ao enviar via Evolution API", detail: evResult });
     }
   } catch (e) {
     return json(502, { error: "Evolution API indisponível", detail: e.message });
@@ -336,7 +355,7 @@ async function handleWhatsappSend(req, res) {
     console.error("[send] supabase insert error:", e.message);
   }
 
-  return json(200, { ok: true, key: msgKey });
+  return json(200, { ok: true, key: msgKey, ...(bestEffort ? { warning: "contact_not_verified" } : {}) });
 }
 
 const server = http.createServer(async (req, res) => {
