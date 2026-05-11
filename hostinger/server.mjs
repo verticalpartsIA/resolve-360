@@ -134,7 +134,7 @@ async function handleWhatsappWebhook(req, res) {
   }
 
   // ── Automações (apenas mensagens de clientes externos @s.whatsapp.net) ────
-  // @lid = dispositivo vinculado interno, @g.us = grupos — ambos ignorados aqui
+  // @lid = dispositivo vinculado interno — ignorado aqui
   const isExternalCustomer = !fromMe && bodyText && remoteJid.endsWith("@s.whatsapp.net");
   if (isExternalCustomer) {
     automateIncoming({ remoteJid, pushName, displayBody, insertedId }).catch((e) =>
