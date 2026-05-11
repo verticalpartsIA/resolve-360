@@ -277,6 +277,11 @@ function ThreadView() {
 
       {/* ── Input ──────────────────────────────────────────────────────────── */}
       <div className="border-t bg-card px-4 py-3">
+        {remoteJid.endsWith("@lid") && (
+          <p className="mb-2 rounded-md bg-amber-500/10 px-3 py-1.5 text-xs text-amber-600 dark:text-amber-400">
+            ⚠️ Conversa interna (dispositivo vinculado) — respostas não são suportadas para este tipo de contato. Mensagens de clientes externos chegam normalmente.
+          </p>
+        )}
         {sendError && (
           <p className="mb-2 rounded-md bg-destructive/10 px-3 py-1.5 text-xs text-destructive">
             {sendError}
