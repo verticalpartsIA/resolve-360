@@ -270,10 +270,16 @@ async function handleWhatsappSend(req, res) {
   const { remoteJid, text } = payload || {};
   if (!remoteJid || !text?.trim()) return json(400, { error: "remoteJid e text são obrigatórios" });
 
-  const number = String(remoteJid)
+  // Evolution API aceita número puro (55119...) OU JID completo (@s.whatsapp.net / @lid / @g.us)
+  // Tentamos primeiro com o JID completo; se falhar, tentamos só o número.
+  const numberOnly = String(remoteJid)
     .replace("@s.whatsapp.net", "")
     .replace("@lid", "")
     .replace("@c.us", "");
+
+  // Para @lid (dispositivo vinculado) e @s.whatsapp.net, usamos o JID completo.
+  // Para casos desconhecidos, fallback para número.
+  const number = remoteJid; // passa o JID completo — Evolution API v2 aceita
 
   // 1. Envia via Evolution API
   let evResult = {};
@@ -284,7 +290,21 @@ async function handleWhatsappSend(req, res) {
       body: JSON.stringify({ number, text: text.trim() }),
     });
     evResult = await r.json().catch(() => ({}));
-    if (!r.ok) {
+
+    // Se falhou com JID completo, tenta com número puro
+    if (!r.ok && numberOnly !== remoteJid) {
+      console.warn("[send] JID falhou, tentando número puro:", numberOnly);
+      const r2 = await fetch(`http://72.61.48.156:8080/message/sendText/pv360`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", apikey: WH_APIKEY() },
+        body: JSON.stringify({ number: numberOnly, text: text.trim() }),
+      });
+      evResult = await r2.json().catch(() => ({}));
+      if (!r2.ok) {
+        console.error("[send] Evolution error (ambos falharam):", evResult);
+        return json(502, { error: "Falha ao enviar via Evolution API", detail: evResult });
+      }
+    } else if (!r.ok) {
       console.error("[send] Evolution error:", evResult);
       return json(502, { error: "Falha ao enviar via Evolution API", detail: evResult });
     }
