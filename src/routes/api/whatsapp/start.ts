@@ -4,12 +4,13 @@ import { createClient } from "@supabase/supabase-js";
 const EVO_URL = "http://72.61.48.156:8080";
 const EVO_INSTANCE = "pv360";
 const SB_URL = "https://jkbklzlbhhfnamaeislb.supabase.co";
+const SB_FALLBACK = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImprYmtsemxiaGhmbmFtYWVpc2xiIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3Nzc5MDM5MywiZXhwIjoyMDkzMzY2MzkzfQ.WoFDfpykUrwQcg0uzDwgfKSwWCy-7zrrJGWGOpo5drs";
 
 function getEvoKey() { return process.env.EVOLUTION_APIKEY ?? "suporte123"; }
 function getSb() {
   return createClient(
     SB_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY ?? SB_FALLBACK,
     { auth: { persistSession: false, autoRefreshToken: false } },
   );
 }
@@ -30,30 +31,34 @@ export const APIRoute = createAPIFileRoute("/api/whatsapp/start")({
 
     const phone = rawPhone.replace(/\D/g, "");
     if (phone.length < 10) {
-      return Response.json({ error: "Numero de telefone invalido" }, { status: 422 });
+      return Response.json({ error: "Numero invalido — use DDI+DDD+numero (ex: 5511999999999)" }, { status: 422 });
     }
 
     const remoteJid = `${phone}@s.whatsapp.net`;
-    const customer = customerName?.trim()
-      ? `${customerName.trim()} (${phone})`
-      : phone;
+    const customer = customerName?.trim() ? `${customerName.trim()} (${phone})` : phone;
 
     // 1. Envia primeira mensagem via Evolution API
-    const r = await fetch(`${EVO_URL}/message/sendText/${EVO_INSTANCE}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", apikey: getEvoKey() },
-      body: JSON.stringify({ number: phone, text }),
-    });
-
     let evResult: Record<string, unknown> = {};
-    evResult = (await r.json().catch(() => ({}))) as Record<string, unknown>;
-
-    if (!r.ok) {
-      console.error("[api/whatsapp/start] Evolution error:", evResult);
-      return Response.json({ error: "Falha ao enviar mensagem — verifique o numero" }, { status: 502 });
+    try {
+      const r = await fetch(`${EVO_URL}/message/sendText/${EVO_INSTANCE}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", apikey: getEvoKey() },
+        body: JSON.stringify({ number: phone, text }),
+      });
+      evResult = (await r.json().catch(() => ({}))) as Record<string, unknown>;
+      if (!r.ok) {
+        const detail = (evResult?.message as string) ?? (evResult?.error as string) ?? `HTTP ${r.status}`;
+        console.error("[api/whatsapp/start] Evolution error:", evResult);
+        return Response.json({ error: `Evolution API: ${detail}` }, { status: 502 });
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error("[api/whatsapp/start] fetch error:", msg);
+      return Response.json({ error: `Falha ao conectar na Evolution API: ${msg}` }, { status: 503 });
     }
 
     const sb = getSb();
+    const msgKey = evResult?.key as Record<string, unknown> | undefined;
 
     // 2. Cria ticket vinculado ao numero
     const { data: newTicket, error: ticketErr } = await sb
@@ -72,12 +77,9 @@ export const APIRoute = createAPIFileRoute("/api/whatsapp/start")({
       .select("id")
       .single();
 
-    if (ticketErr) {
-      console.error("[api/whatsapp/start] ticket create error:", ticketErr.message);
-    }
+    if (ticketErr) console.error("[api/whatsapp/start] ticket error:", ticketErr.message);
 
     // 3. Salva mensagem enviada
-    const msgKey = evResult?.key as Record<string, unknown> | undefined;
     await sb.from("whatsapp_messages").insert({
       instance: EVO_INSTANCE,
       remote_jid: remoteJid,
