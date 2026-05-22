@@ -7,7 +7,6 @@ const getSb = () =>
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
-// Evolution API v2 payload — evento messages.upsert
 type EvoPayload = {
   event: string;
   instance: string;
@@ -20,17 +19,17 @@ type EvoPayload = {
 };
 
 function extractBody(msg: Record<string, unknown> | undefined): string {
-  if (!msg) return "[mídia]";
+  if (!msg) return "[midia]";
   if (typeof msg.conversation === "string") return msg.conversation;
   const ext = msg.extendedTextMessage as Record<string, unknown> | undefined;
   if (typeof ext?.text === "string") return ext.text;
   const img = msg.imageMessage as Record<string, unknown> | undefined;
   if (img) return (typeof img.caption === "string" && img.caption) || "[imagem]";
-  if (msg.videoMessage) return "[vídeo]";
-  if (msg.audioMessage) return "[áudio]";
+  if (msg.videoMessage) return "[video]";
+  if (msg.audioMessage) return "[audio]";
   if (msg.documentMessage) return "[documento]";
   if (msg.stickerMessage) return "[sticker]";
-  return "[mídia]";
+  return "[midia]";
 }
 
 function extractMediaType(msg: Record<string, unknown> | undefined): string | null {
@@ -43,16 +42,18 @@ function extractMediaType(msg: Record<string, unknown> | undefined): string | nu
   return null;
 }
 
+function jidToPhone(jid: string): string {
+  return jid.replace("@s.whatsapp.net", "").replace("@lid", "").replace("@c.us", "");
+}
+
 export const APIRoute = createAPIFileRoute("/api/webhook/evolution")({
-  // Health-check — Evolution API testa com GET antes de ativar
   GET: async () => new Response("OK", { status: 200 }),
 
   POST: async ({ request }) => {
-    // Validação básica do apikey
     const apikey = request.headers.get("apikey") ?? request.headers.get("x-api-key");
     const expected = process.env.EVOLUTION_APIKEY ?? "suporte123";
     if (apikey !== expected) {
-      console.warn("[webhook/evolution] apikey inválido:", apikey);
+      console.warn("[webhook/evolution] apikey invalido:", apikey);
       return new Response("Unauthorized", { status: 401 });
     }
 
@@ -63,7 +64,6 @@ export const APIRoute = createAPIFileRoute("/api/webhook/evolution")({
       return new Response("Bad Request", { status: 400 });
     }
 
-    // Só processa mensagens recebidas
     if (payload.event !== "messages.upsert") {
       return new Response("OK", { status: 200 });
     }
@@ -75,10 +75,10 @@ export const APIRoute = createAPIFileRoute("/api/webhook/evolution")({
     const fromMe = key.fromMe ?? false;
     const body = extractBody(message);
     const mediaType = extractMediaType(message);
+    const isGroup = remoteJid.endsWith("@g.us");
 
     const sb = getSb();
 
-    // Vincula ao ticket aberto com esse número (se houver)
     let ticketId: string | null = null;
     const { data: linked } = await sb
       .from("tickets")
@@ -88,6 +88,33 @@ export const APIRoute = createAPIFileRoute("/api/webhook/evolution")({
       .order("created_at", { ascending: false })
       .limit(1);
     ticketId = linked?.[0]?.id ?? null;
+
+    if (!fromMe && !isGroup && ticketId === null) {
+      const phone = jidToPhone(remoteJid);
+      const customer = pushName ? `${pushName} (${phone})` : phone;
+      const { data: newTicket, error: ticketError } = await sb
+        .from("tickets")
+        .insert({
+          customer,
+          part: "A definir",
+          part_code: "WA",
+          reason: "Contato via WhatsApp",
+          occurrence_reason: "outro",
+          channel: "whatsapp",
+          whatsapp_thread_id: remoteJid,
+          created_by: null,
+          assigned_to: null,
+        })
+        .select("id")
+        .single();
+
+      if (ticketError) {
+        console.error("[webhook/evolution] auto-ticket error:", ticketError.message);
+      } else {
+        ticketId = newTicket?.id ?? null;
+        console.log(`[webhook/evolution] ticket auto-criado: ${ticketId} para ${remoteJid}`);
+      }
+    }
 
     const { error } = await sb.from("whatsapp_messages").insert({
       instance: payload.instance ?? "pv360",
@@ -107,7 +134,7 @@ export const APIRoute = createAPIFileRoute("/api/webhook/evolution")({
       return new Response("Internal Server Error", { status: 500 });
     }
 
-    console.log(`[webhook/evolution] ${fromMe ? "→" : "←"} ${remoteJid}: ${body.slice(0, 60)}`);
+    console.log(`[webhook/evolution] ${fromMe ? "->" : "<-"} ${remoteJid}: ${body.slice(0, 60)}`);
     return new Response("OK", { status: 200 });
   },
 });
