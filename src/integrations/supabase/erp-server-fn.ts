@@ -2,11 +2,6 @@ import { createServerFn } from '@tanstack/react-start';
 import { createClient } from '@supabase/supabase-js';
 import type { OmieCliente, OmieProduto } from './erp-client';
 
-function telefoneStr(ddd?: string | null, num?: string | null): string | null {
-  if (!ddd && !num) return null;
-  return ddd ? `(${ddd}) ${num ?? ''}`.trim() : (num ?? null);
-}
-
 function segmentoFromTags(tags: unknown): string | null {
   if (!Array.isArray(tags)) return null;
   const outros = (tags as { tag: string }[])
@@ -26,13 +21,13 @@ export const fetchClientesAtivosFn = createServerFn().handler(async (): Promise<
 
   const client = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
 
+  // ClientesReais: only real clients (no suppliers), 1408 rows, clean data
   const { data, error } = await client
-    .from('omie_customers')
+    .from('ClientesReais')
     .select(
-      'codigo_cliente_omie,codigo_cliente_integracao,cnpj_cpf,razao_social,email,telefone1_ddd,telefone1_numero,cidade,estado,inativo,tags,updated_at',
+      'codigo_cliente_omie,codigo_cliente_integracao,cnpj_cpf,razao_social,email,telefone,cidade,estado,tags',
     )
-    .eq('inativo', false)
-    .not('codigo_cliente_integracao', 'is', null)
+    .not('cnpj_cpf', 'is', null)
     .order('razao_social', { ascending: true });
 
   if (error) {
@@ -46,12 +41,12 @@ export const fetchClientesAtivosFn = createServerFn().handler(async (): Promise<
     cnpj_cpf: row.cnpj_cpf ?? '',
     nome: row.razao_social ?? '',
     email: row.email || null,
-    telefone: telefoneStr(row.telefone1_ddd, row.telefone1_numero),
+    telefone: row.telefone || null,
     cidade: row.cidade || null,
     estado: row.estado || null,
-    inativo: row.inativo ?? false,
+    inativo: false,
     segmento: segmentoFromTags(row.tags),
-    updated_at: row.updated_at ?? null,
+    updated_at: null,
   })) as OmieCliente[];
 });
 
@@ -63,9 +58,13 @@ export const fetchProdutosAtivosFn = createServerFn().handler(async (): Promise<
 
   const client = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
 
+  // Produtos_VP: 4140 rows — replaces non-existent PosVenda view
   const { data, error } = await client
-    .from('PosVenda')
-    .select('codigo_omie,codigo_vp,descricao,marca,estoque')
+    .from('Produtos_VP')
+    .select(
+      'codigo_produto,codigo,descricao,unidade,ncm,ean,valor_unitario,codigo_familia,marca,bloqueado,tipo_item,quantidade_estoque',
+    )
+    .eq('bloqueado', false)
     .order('descricao', { ascending: true });
 
   if (error) {
@@ -75,24 +74,24 @@ export const fetchProdutosAtivosFn = createServerFn().handler(async (): Promise<
 
   return (data ?? [])
     .filter((p) => {
-      const desc = (p.descricao ?? "").toUpperCase();
-      return !desc.startsWith("(NÃO USAR)") && !desc.startsWith("(NAO USAR)");
+      const desc = (p.descricao ?? '').toUpperCase();
+      return !desc.startsWith('(NÃO USAR)') && !desc.startsWith('(NAO USAR)');
     })
     .map((p) => ({
-    codigo_produto: String(p.codigo_omie),
-    codigo: p.codigo_vp ?? null,
-    codigo_produto_integracao: null,
-    descricao: p.descricao ?? '',
-    unidade: null,
-    valor_unitario: null,
-    marca: p.marca ?? null,
-    codigo_familia: null,
-    inativo: false,
-    bloqueado: null,
-    tipo_item: null,
-    ncm: null,
-    ean: null,
-    origem_mercadoria: null,
-    estoque: (p.estoque as number | null) ?? null,
-  })) as OmieProduto[];
+      codigo_produto: String(p.codigo_produto),
+      codigo: p.codigo ?? '',
+      codigo_produto_integracao: null,
+      descricao: p.descricao ?? '',
+      unidade: p.unidade ?? null,
+      valor_unitario: (p.valor_unitario as number | null) ?? null,
+      marca: p.marca ?? null,
+      codigo_familia: p.codigo_familia ? String(p.codigo_familia) : null,
+      inativo: false,
+      bloqueado: p.bloqueado ?? null,
+      tipo_item: p.tipo_item ?? null,
+      ncm: p.ncm ?? null,
+      ean: p.ean ?? null,
+      origem_mercadoria: null,
+      estoque: (p.quantidade_estoque as number | null) ?? null,
+    })) as OmieProduto[];
 });
