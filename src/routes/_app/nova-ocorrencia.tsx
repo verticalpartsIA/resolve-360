@@ -172,7 +172,13 @@ function NewTicket() {
     if (!form.part || !form.partCode || !form.reason) { setErr("Preencha peça, código ERP e narrativa antes de registrar."); return; }
     setSubmitting(true);
     try {
-      const t = await createTicket({ ...form, channel, acaoContencao: contencao });
+      const deadline = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("Tempo esgotado (20 s). Verifique sua conexão e tente novamente.")), 20_000),
+      );
+      const t = await Promise.race([
+        createTicket({ ...form, channel, acaoContencao: contencao }),
+        deadline,
+      ]);
       let internalCode: string | undefined;
       if (openInternal && internal.subject) {
         const it = createInternalTicket({
@@ -183,10 +189,9 @@ function NewTicket() {
         internalCode = it.code;
       }
       setCreated({ ticketId: t.id, roNumber: t.roNumber ?? t.code, internalCode });
-      setStep(4);
     } catch (e) {
       console.error("[nova-ocorrencia] finalize error", e);
-      setErr("Falha ao registrar a ocorrência. Verifique sua conexão e tente novamente.");
+      setErr(e instanceof Error ? e.message : "Falha ao registrar a ocorrência. Verifique sua conexão e tente novamente.");
     } finally {
       setSubmitting(false);
     }
