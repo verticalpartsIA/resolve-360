@@ -134,9 +134,9 @@ async function handleWhatsappWebhook(req, res) {
     console.error("[webhook] whatsapp_messages error:", e.message);
   }
 
-  // ── Automações (apenas mensagens de clientes externos @s.whatsapp.net) ────
-  // @lid = dispositivo vinculado interno — ignorado aqui
-  const isExternalCustomer = !fromMe && bodyText && remoteJid.endsWith("@s.whatsapp.net");
+  // ── Automações — processa @s.whatsapp.net E @lid (widget do site) ──────────
+  const isExternalCustomer = !fromMe && bodyText &&
+    (remoteJid.endsWith("@s.whatsapp.net") || remoteJid.endsWith("@lid"));
   if (isExternalCustomer) {
     automateIncoming({ remoteJid, pushName, displayBody, insertedId }).catch((e) =>
       console.error("[automate] erro geral:", e.message),
@@ -146,10 +146,80 @@ async function handleWhatsappWebhook(req, res) {
   return json(200, { ok: true });
 }
 
+// ─── Chamada ao Claude com histórico completo ─────────────────────────────────
+const CLAUDE_SYSTEM_PROMPT =
+  "Você é um atendente de pós-venda da VerticalParts, empresa especializada em peças para " +
+  "elevadores, escadas rolantes e esteiras (importações e produtos nacionais). " +
+  "Marcas principais: BST, Monarch, Fermator.\n\n" +
+  "Você atende clientes via WhatsApp. Siga estas diretrizes:\n\n" +
+  "COMUNICAÇÃO:\n" +
+  "- Mensagens curtas e objetivas (máximo 3-4 linhas por mensagem)\n" +
+  "- Tom profissional mas amigável\n" +
+  "- Português brasileiro coloquial mas correto\n" +
+  "- Use emojis com moderação quando apropriado\n\n" +
+  "VOCÊ PODE AJUDAR COM:\n" +
+  "- Acompanhamento de pedidos e ocorrências de pós-venda\n" +
+  "- Dúvidas sobre peças, produtos e compatibilidade\n" +
+  "- Status de entregas e prazos\n" +
+  "- Abertura de reclamações e registros de ocorrência\n\n" +
+  "QUANDO NÃO SOUBER:\n" +
+  "- Diga que vai verificar e que um especialista entrará em contato em breve\n" +
+  "- Nunca invente números de pedido, preços ou prazos específicos\n\n" +
+  "IMPORTANTE:\n" +
+  "- Se perguntarem se você é humano ou robô, seja honesto mas gentil\n" +
+  "- Priorize a resolução do problema do cliente";
+
+async function callClaudeWithHistory(remoteJid) {
+  const apiKey = ANTHROPIC_KEY();
+  if (!apiKey) return null;
+
+  // Busca últimas 20 mensagens do contato
+  let history = [];
+  try {
+    const r = await sbFetch(
+      `/rest/v1/whatsapp_messages?select=body,from_me&remote_jid=eq.${encodeURIComponent(remoteJid)}&order=created_at.asc&limit=20`,
+    );
+    if (r.ok) {
+      const rows = await r.json();
+      history = (rows || []).map((m) => ({
+        role: m.from_me ? "assistant" : "user",
+        content: m.body,
+      }));
+    }
+  } catch (e) { console.error("[claude] history fetch error:", e.message); }
+
+  if (history.length === 0) return null;
+
+  try {
+    const r = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: CLAUDE_MODEL(),
+        max_tokens: 1024,
+        system: CLAUDE_SYSTEM_PROMPT,
+        messages: history,
+      }),
+      signal: AbortSignal.timeout(30_000),
+    });
+    if (r.ok) {
+      const data = await r.json();
+      return data.content?.[0]?.text?.trim() || null;
+    }
+    console.error("[claude] HTTP", r.status, await r.text().catch(() => ""));
+  } catch (e) { console.error("[claude] call error:", e.message); }
+  return null;
+}
+
 // ─── Pipeline de automação ────────────────────────────────────────────────────
 async function automateIncoming({ remoteJid, pushName, displayBody, insertedId }) {
-  const phone = remoteJid.replace("@s.whatsapp.net", "").replace("@c.us", "");
-  const contactName = pushName || phone;
+  const isLid = remoteJid.endsWith("@lid");
+  const phone = remoteJid.replace("@s.whatsapp.net", "").replace("@lid", "").replace("@c.us", "");
+  const contactName = pushName || (isLid ? `cliente-${phone.slice(0, 8)}` : phone);
 
   // ── A. Busca ticket aberto existente ──────────────────────────────────────
   const statusFilter = OPEN_STATUSES.map(s => `"${s}"`).join(",");
@@ -164,35 +234,21 @@ async function automateIncoming({ remoteJid, pushName, displayBody, insertedId }
     }
   } catch (e) { console.error("[automate] ticket search error:", e.message); }
 
-  // ── B. Verifica se já foi enviada resposta automática para este JID ────────
-  // Usamos raw->auto_reply para não disparar duas vezes em testes repetidos
-  let isFirstMessage = false;
-  try {
-    const r = await sbFetch(
-      `/rest/v1/whatsapp_messages?select=id&remote_jid=eq.${encodeURIComponent(remoteJid)}&from_me=eq.true&raw->>auto_reply=eq.true&limit=1`,
-    );
-    if (r.ok) {
-      const rows = await r.json();
-      // Envia resposta automática apenas se nunca foi enviada antes para este JID
-      isFirstMessage = rows.length === 0;
-    }
-  } catch (e) { console.error("[automate] first-message check error:", e.message); }
-
-  // ── C. Cria ticket automático se não há nenhum aberto ────────────────────
+  // ── B. Cria ticket automático se não há nenhum aberto ────────────────────
   if (!openTicket) {
     try {
       const r = await sbFetch("/rest/v1/tickets", {
         method: "POST",
         body: JSON.stringify({
-          customer:        contactName,
-          customer_telefone: phone,
-          part:            "WhatsApp — aguardando triagem",
-          part_code:       "WA-AUTO",
-          reason:          displayBody.slice(0, 500),
+          customer:          contactName,
+          customer_telefone: isLid ? null : phone,
+          part:              "WhatsApp — aguardando triagem",
+          part_code:         "WA-AUTO",
+          reason:            displayBody.slice(0, 500),
           occurrence_reason: "outro",
-          channel:         "whatsapp",
-          status:          "aberto",
-          priority:        "media",
+          channel:           "whatsapp",
+          status:            "aberto",
+          priority:          "media",
           whatsapp_thread_id: remoteJid,
         }),
       });
@@ -206,7 +262,7 @@ async function automateIncoming({ remoteJid, pushName, displayBody, insertedId }
     } catch (e) { console.error("[automate] ticket create exception:", e.message); }
   }
 
-  // ── D. Vincula mensagem ao ticket ────────────────────────────────────────
+  // ── C. Vincula mensagem ao ticket ────────────────────────────────────────
   if (openTicket) {
     if (insertedId) {
       await sbFetch(`/rest/v1/whatsapp_messages?id=eq.${insertedId}`, {
@@ -225,44 +281,53 @@ async function automateIncoming({ remoteJid, pushName, displayBody, insertedId }
     }).catch((e) => console.error("[automate] ticket_msg error:", e.message));
   }
 
-  // ── E. Primeira resposta automática (com IA se OPENAI_API_KEY estiver set) ─
-  if (isFirstMessage) {
-    const replyText = await generateFirstReply(contactName, displayBody);
-    try {
-      // Envia via Evolution API
-      await fetch(`http://72.61.48.156:8080/message/sendText/pv360`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", apikey: WH_APIKEY() },
-        body: JSON.stringify({ number: remoteJid, text: replyText }),
-      });
-      // Salva resposta automática no Supabase
-      const srRes = await sbFetch("/rest/v1/whatsapp_messages", {
-        method: "POST",
-        body: JSON.stringify({
-          instance: "pv360",
-          remote_jid: remoteJid,
-          from_me: true,
-          body: replyText,
-          raw: { auto_reply: true },
-        }),
-      });
-      // Salva também no ticket
-      if (openTicket && srRes.ok) {
-        await sbFetch("/rest/v1/ticket_messages", {
+  // ── D. Resposta automática via Claude (toda mensagem, se habilitado) ──────
+  const autoReply = (process.env.HERMES_AUTO_REPLY || "").toLowerCase() === "true";
+  if (autoReply) {
+    const replyText = await callClaudeWithHistory(remoteJid);
+    if (replyText) {
+      try {
+        const sendNumber = isLid ? remoteJid : phone;
+        const r = await fetch(`http://72.61.48.156:8080/message/sendText/pv360`, {
           method: "POST",
-          body: JSON.stringify({
-            ticket_id:   openTicket.id,
-            kind:        "whatsapp",
-            author_name: "Bot pv360",
-            body:        replyText,
-          }),
-        }).catch(() => {});
-      }
-      console.log("[automate] primeira resposta enviada");
-    } catch (e) { console.error("[automate] first-reply send error:", e.message); }
+          headers: { "Content-Type": "application/json", apikey: WH_APIKEY() },
+          body: JSON.stringify({ number: sendNumber, text: replyText }),
+        });
+        if (!r.ok) {
+          console.error("[automate] Evolution send error:", await r.json().catch(() => ({})));
+        } else {
+          // Salva resposta no Supabase
+          const srRes = await sbFetch("/rest/v1/whatsapp_messages", {
+            method: "POST",
+            body: JSON.stringify({
+              instance: "pv360",
+              remote_jid: remoteJid,
+              from_me: true,
+              body: replyText,
+              raw: { auto_reply: true },
+            }),
+          });
+          // Salva no ticket
+          if (openTicket && srRes.ok) {
+            await sbFetch("/rest/v1/ticket_messages", {
+              method: "POST",
+              body: JSON.stringify({
+                ticket_id:   openTicket.id,
+                kind:        "whatsapp",
+                author_name: "Claude (VerticalParts Bot)",
+                body:        replyText,
+              }),
+            }).catch(() => {});
+          }
+          console.log(`[automate] ✅ Claude respondeu para ${contactName}: "${replyText.slice(0, 60)}..."`);
+        }
+      } catch (e) { console.error("[automate] reply send error:", e.message); }
+    } else {
+      console.warn("[automate] Claude sem resposta para", remoteJid);
+    }
   }
 
-  // ── F. Notificação para o time ────────────────────────────────────────────
+  // ── E. Notificação para o time ────────────────────────────────────────────
   const notifyUrl = NOTIFY_URL();
   if (notifyUrl) {
     fetch(notifyUrl, {
@@ -275,7 +340,7 @@ async function automateIncoming({ remoteJid, pushName, displayBody, insertedId }
         message:     displayBody,
         ticket_code: openTicket?.code ?? null,
         thread_url:  `https://aliceblue-dove-844629.hostingersite.com/thread/${encodeURIComponent(remoteJid)}`,
-        is_first:    isFirstMessage,
+        is_first:    true,
         timestamp:   new Date().toISOString(),
       }),
     }).catch((e) => console.error("[automate] notify error:", e.message));
