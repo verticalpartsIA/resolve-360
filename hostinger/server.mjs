@@ -13,8 +13,8 @@ const SB_URL          = "https://jkbklzlbhhfnamaeislb.supabase.co";
 const SB_SERVICE_KEY  = () =>
   process.env.SUPABASE_SERVICE_ROLE_KEY ||
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImprYmtsemxiaGhmbmFtYWVpc2xiIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3Nzc5MDM5MywiZXhwIjoyMDkzMzY2MzkzfQ.WoFDfpykUrwQcg0uzDwgfKSwWCy-7zrrJGWGOpo5drs";
-const OPENAI_KEY      = () => process.env.OPENAI_API_KEY ||
-  Buffer.from("c2stcHJvai0xWWFNcTZDQnRRLVhLVlpqQm8wMnVNNEItUG9GM3JvR2ZweXNsX25jZExFVWtsVkFBYzZzOHkyS2tYdXhPTmxVZmgyNGcyX3Atc1QzQmxia0ZKZkpaM0xBc3BWZjVjMVB6TVpEa285WE1KcEtiQzNyUnp1T2xRbE5NV2hhaDB4M21wUm1KMWQyVWFvRnd0SnNYd2JMTUdacC0wZ0E=", "base64").toString();
+const ANTHROPIC_KEY   = () => process.env.ANTHROPIC_API_KEY || "";
+const CLAUDE_MODEL    = () => process.env.HERMES_MODEL || "claude-haiku-4-5";
 const NOTIFY_URL      = () => process.env.NOTIFY_WEBHOOK_URL || ""; // n8n / Slack / Telegram
 
 const OPEN_STATUSES = ["aberto","em_atendimento","aguardando_cliente","aguardando_interno"];
@@ -282,33 +282,31 @@ async function automateIncoming({ remoteJid, pushName, displayBody, insertedId }
   }
 }
 
-// ─── Geração da primeira resposta (IA ou fallback fixo) ───────────────────────
+// ─── Geração da primeira resposta (Claude / fallback fixo) ────────────────────
 async function generateFirstReply(contactName, messageBody) {
-  const openaiKey = OPENAI_KEY();
-  if (!openaiKey) {
-    // Texto fixo quando não há chave de IA configurada
+  const apiKey = ANTHROPIC_KEY();
+  if (!apiKey) {
+    // Texto fixo quando ANTHROPIC_API_KEY não está configurada
     return `Olá${contactName ? ", " + contactName.split(" ")[0] : ""}! 👋\n\nRecebemos sua mensagem e em breve um de nossos atendentes irá retornar.\n\nHorário de atendimento: segunda a sexta, das 8h às 18h.\n\nObrigado! 🙏`;
   }
 
   try {
-    const r = await fetch("https://api.openai.com/v1/chat/completions", {
+    const r = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${openaiKey}`,
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
+        model: CLAUDE_MODEL(),
         max_tokens: 200,
+        system:
+          "Você é o assistente de atendimento da VerticalParts (pós-venda de peças industriais). " +
+          "Responda APENAS com a mensagem de boas-vindas para o cliente, em português, " +
+          "de forma cordial e profissional, em 2-3 linhas. " +
+          "Mencione que um atendente irá retornar em breve. Não use markdown, só texto simples.",
         messages: [
-          {
-            role: "system",
-            content:
-              "Você é o assistente de atendimento da VerticalParts (pós-venda de peças industriais). " +
-              "Responda APENAS com a mensagem de boas-vindas para o cliente, em português, " +
-              "de forma cordial e profissional, em 2-3 linhas. " +
-              "Mencione que um atendente irá retornar em breve. Não use markdown, só texto simples.",
-          },
           {
             role: "user",
             content: `Cliente: ${contactName}\nMensagem recebida: "${messageBody}"\n\nGere a resposta de boas-vindas.`,
@@ -318,11 +316,12 @@ async function generateFirstReply(contactName, messageBody) {
     });
     if (r.ok) {
       const data = await r.json();
-      return data.choices?.[0]?.message?.content?.trim() ||
+      return data.content?.[0]?.text?.trim() ||
         `Olá, ${contactName}! Recebemos sua mensagem. Em breve retornamos. 🙏`;
     }
+    console.error("[automate] Claude HTTP", r.status, await r.text().catch(() => ""));
   } catch (e) {
-    console.error("[automate] openai error:", e.message);
+    console.error("[automate] Claude error:", e.message);
   }
 
   return `Olá, ${contactName.split(" ")[0]}! Recebemos sua mensagem e em breve um atendente irá retornar. 🙏`;
@@ -437,8 +436,12 @@ async function handleWhatsappStart(req, res) {
     return json(422, { error: "phone e text são obrigatórios" });
   }
 
-  const phone = String(rawPhone).replace(/\D/g, "");
-  if (phone.length < 10) {
+  let phone = String(rawPhone).replace(/\D/g, "");
+  // Auto-adiciona DDI 55 (Brasil) se o número tiver só DDD+número (10 ou 11 dígitos)
+  if ((phone.length === 10 || phone.length === 11) && !phone.startsWith("55")) {
+    phone = "55" + phone;
+  }
+  if (phone.length < 12 || phone.length > 13) {
     return json(422, { error: "Número inválido — use DDI+DDD+número (ex: 5511999999999)" });
   }
 
@@ -668,11 +671,12 @@ const server = http.createServer(async (req, res) => {
     if (urlPath === "/api/whatsapp/status") {
       res.statusCode = 200;
       res.setHeader("Content-Type", "application/json");
-      const oaiKey = OPENAI_KEY();
+      const claudeKey = ANTHROPIC_KEY();
       const notifyUrl = NOTIFY_URL();
       res.end(JSON.stringify({
-        openai_key_set: oaiKey.length > 0,
-        openai_key_prefix: oaiKey ? oaiKey.slice(0, 12) + "..." : null,
+        claude_key_set: claudeKey.length > 0,
+        claude_key_prefix: claudeKey ? claudeKey.slice(0, 12) + "..." : null,
+        claude_model: CLAUDE_MODEL(),
         notify_url_set: notifyUrl.length > 0,
         evolution_apikey: WH_APIKEY().slice(0, 4) + "...",
         env_file_loaded: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
