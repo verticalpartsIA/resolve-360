@@ -752,6 +752,44 @@ const server = http.createServer(async (req, res) => {
       }));
       return;
     }
+    // ── Teste direto: chama Claude e retorna resposta (diagnóstico) ──────────
+    if (urlPath === "/api/whatsapp/test-claude") {
+      res.statusCode = 200;
+      res.setHeader("Content-Type", "application/json");
+      const apiKey = ANTHROPIC_KEY();
+      if (!apiKey) {
+        res.end(JSON.stringify({ ok: false, error: "ANTHROPIC_API_KEY não definida" }));
+        return;
+      }
+      try {
+        const t0 = Date.now();
+        const r = await fetch("https://api.anthropic.com/v1/messages", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-api-key": apiKey,
+            "anthropic-version": "2023-06-01",
+          },
+          body: JSON.stringify({
+            model: CLAUDE_MODEL(),
+            max_tokens: 50,
+            messages: [{ role: "user", content: "Responda só: OK" }],
+          }),
+          signal: AbortSignal.timeout(15_000),
+        });
+        const elapsed = Date.now() - t0;
+        if (r.ok) {
+          const data = await r.json();
+          res.end(JSON.stringify({ ok: true, reply: data.content?.[0]?.text, elapsed_ms: elapsed }));
+        } else {
+          const err = await r.text();
+          res.end(JSON.stringify({ ok: false, http_status: r.status, error: err, elapsed_ms: elapsed }));
+        }
+      } catch (e) {
+        res.end(JSON.stringify({ ok: false, error: e.message }));
+      }
+      return;
+    }
     if (urlPath === "/api/whatsapp/webhook") {
       await handleWhatsappWebhook(req, res);
       return;
