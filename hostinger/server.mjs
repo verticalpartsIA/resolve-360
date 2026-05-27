@@ -739,9 +739,12 @@ const server = http.createServer(async (req, res) => {
       const claudeKey = ANTHROPIC_KEY();
       const notifyUrl = NOTIFY_URL();
       res.end(JSON.stringify({
+        deploy_version: "4122d73",
         claude_key_set: claudeKey.length > 0,
         claude_key_prefix: claudeKey ? claudeKey.slice(0, 12) + "..." : null,
         claude_model: CLAUDE_MODEL(),
+        hermes_auto_reply: process.env.HERMES_AUTO_REPLY ?? "(não definido)",
+        auto_reply_ativo: (process.env.HERMES_AUTO_REPLY || "").toLowerCase() === "true",
         notify_url_set: notifyUrl.length > 0,
         evolution_apikey: WH_APIKEY().slice(0, 4) + "...",
         env_file_loaded: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
