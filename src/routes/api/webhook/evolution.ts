@@ -1,5 +1,6 @@
 import { createAPIFileRoute } from "@tanstack/react-start/api";
 import { createClient } from "@supabase/supabase-js";
+import { autoReplyWithHermes } from "@/lib/hermes";
 
 const SB_URL = "https://jkbklzlbhhfnamaeislb.supabase.co";
 const getSb = () =>
@@ -135,6 +136,13 @@ export const APIRoute = createAPIFileRoute("/api/webhook/evolution")({
     }
 
     console.log(`[webhook/evolution] ${fromMe ? "->" : "<-"} ${remoteJid}: ${body.slice(0, 60)}`);
+
+    // Auto-reply com Hermes — fire-and-forget (não bloqueia o 200 OK)
+    // Só responde mensagens recebidas (não enviadas por nós)
+    if (!fromMe) {
+      void autoReplyWithHermes({ remoteJid, body, ticketId, pushName: pushName ?? null });
+    }
+
     return new Response("OK", { status: 200 });
   },
 });

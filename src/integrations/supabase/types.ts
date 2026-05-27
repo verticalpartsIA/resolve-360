@@ -600,6 +600,7 @@ export type Database = {
           id: string
           instance: string
           remote_jid: string
+          phone: string          // gerado: remote_jid sem sufixo @s.whatsapp.net/@lid/@c.us
           push_name: string | null
           from_me: boolean
           message_id: string | null
@@ -614,6 +615,7 @@ export type Database = {
           id?: string
           instance?: string
           remote_jid: string
+          // phone é GENERATED — não enviar no insert
           push_name?: string | null
           from_me?: boolean
           message_id?: string | null
@@ -628,6 +630,7 @@ export type Database = {
           id?: string
           instance?: string
           remote_jid?: string
+          // phone é GENERATED — não enviar no update
           push_name?: string | null
           from_me?: boolean
           message_id?: string | null
