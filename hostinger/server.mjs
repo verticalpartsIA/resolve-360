@@ -33,6 +33,21 @@ function sbFetch(path, opts = {}) {
   });
 }
 
+// ─── Agenda @lid: resolve JID → { phone, nome, empresa } ─────────────────────
+async function lookupLidAgenda(lidJid) {
+  try {
+    const r = await sbFetch(
+      `/rest/v1/lid_agenda?lid_jid=eq.${encodeURIComponent(lidJid)}&limit=1`,
+      { method: "GET", headers: { "Prefer": "return=representation" } },
+    );
+    if (!r.ok) return null;
+    const rows = await r.json();
+    return Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
+  } catch {
+    return null;
+  }
+}
+
 function extractBody(msg) {
   if (!msg) return null;
   if (typeof msg.conversation === "string") return msg.conversation;
@@ -618,8 +633,17 @@ async function handleWhatsappSend(req, res) {
   // ── @lid: dispositivo vinculado — WhatsApp oculta o número real ──────────
   // Se o operador informou o número manual (overridePhone), envia via Evolution
   // usando o número real, mas salva com o JID @lid original (aparece na thread).
-  // Sem overridePhone → salva apenas localmente (comportamento anterior).
+  // Se não veio overridePhone no payload, tenta resolver via agenda telefônica.
+  // Sem nenhum dos dois → salva apenas localmente (comportamento anterior).
   if (String(remoteJid).endsWith("@lid")) {
+    // Auto-lookup na agenda se overridePhone não foi passado pelo frontend
+    if (!overridePhone) {
+      const entry = await lookupLidAgenda(remoteJid);
+      if (entry?.phone) {
+        console.log(`[send] @lid auto-agenda: JID ${remoteJid} → ${entry.phone} (${entry.nome ?? "sem nome"})`);
+        overridePhone = entry.phone;
+      }
+    }
     // Normaliza o número: apenas dígitos, garante prefixo 55 (Brasil)
     const rawPhone  = String(overridePhone ?? "").replace(/\D/g, "");
     const realPhone = rawPhone
@@ -779,6 +803,65 @@ async function handleWhatsappSend(req, res) {
   return json(200, { ok: true, key: msgKey, ...(bestEffort ? { warning: "contact_not_verified" } : {}) });
 }
 
+// ─── Agenda @lid — GET /api/whatsapp/lid-agenda[?jid=xxx] ────────────────────
+async function handleLidAgendaGet(req, res) {
+  const url    = new URL(req.url, "http://localhost");
+  const jid    = url.searchParams.get("jid");
+  const filter = jid ? `?lid_jid=eq.${encodeURIComponent(jid)}&limit=1` : "?order=nome.asc";
+  const r      = await sbFetch(`/rest/v1/lid_agenda${filter}`, { method: "GET" });
+  const data   = await r.json().catch(() => []);
+  res.statusCode = r.ok ? 200 : 502;
+  res.setHeader("Content-Type", "application/json");
+  // Para lookup por jid devolve objeto único (ou null); para lista devolve array
+  res.end(JSON.stringify(jid ? (Array.isArray(data) && data.length > 0 ? data[0] : null) : data));
+}
+
+// ─── Agenda @lid — POST /api/whatsapp/lid-agenda (upsert) ────────────────────
+async function handleLidAgendaUpsert(req, res) {
+  let payload;
+  try { payload = JSON.parse(await readBody(req)); }
+  catch { return json(400, { error: "JSON inválido" }); }
+
+  const { jid, phone, nome, empresa } = payload || {};
+  if (!jid || !phone) return json(400, { error: "jid e phone são obrigatórios" });
+
+  const cleanPhone = String(phone).replace(/\D/g, "");
+  if (!cleanPhone) return json(400, { error: "Telefone inválido" });
+
+  const body = JSON.stringify({
+    lid_jid: jid,
+    phone:   cleanPhone,
+    nome:    nome  ? String(nome).trim()    : null,
+    empresa: empresa ? String(empresa).trim() : null,
+    updated_at: new Date().toISOString(),
+  });
+
+  const r = await sbFetch("/rest/v1/lid_agenda", {
+    method: "POST",
+    headers: { "Prefer": "resolution=merge-duplicates,return=representation" },
+    body,
+  });
+  const data = await r.json().catch(() => ({}));
+  res.statusCode  = r.ok ? 200 : 502;
+  res.setHeader("Content-Type", "application/json");
+  res.end(JSON.stringify(r.ok ? { ok: true, entry: Array.isArray(data) ? data[0] : data } : { error: data }));
+}
+
+// ─── Agenda @lid — DELETE /api/whatsapp/lid-agenda ────────────────────────────
+async function handleLidAgendaDelete(req, res) {
+  let payload;
+  try { payload = JSON.parse(await readBody(req)); }
+  catch { return json(400, { error: "JSON inválido" }); }
+
+  const { jid } = payload || {};
+  if (!jid) return json(400, { error: "jid é obrigatório" });
+
+  const r = await sbFetch(`/rest/v1/lid_agenda?lid_jid=eq.${encodeURIComponent(jid)}`, { method: "DELETE" });
+  res.statusCode = r.ok ? 200 : 502;
+  res.setHeader("Content-Type", "application/json");
+  res.end(JSON.stringify(r.ok ? { ok: true } : { error: "Falha ao remover" }));
+}
+
 const server = http.createServer(async (req, res) => {
   try {
     const urlPath = new URL(req.url || "/", "http://localhost").pathname;
@@ -852,6 +935,12 @@ const server = http.createServer(async (req, res) => {
     if (urlPath === "/api/whatsapp/start") {
       await handleWhatsappStart(req, res);
       return;
+    }
+    if (urlPath === "/api/whatsapp/lid-agenda") {
+      if (req.method === "GET")    { await handleLidAgendaGet(req, res);    return; }
+      if (req.method === "POST")   { await handleLidAgendaUpsert(req, res); return; }
+      if (req.method === "DELETE") { await handleLidAgendaDelete(req, res); return; }
+      res.statusCode = 405; res.end("Method Not Allowed"); return;
     }
 
     const filePath = join(clientDir, urlPath);

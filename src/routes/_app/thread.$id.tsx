@@ -12,6 +12,9 @@ import {
   CheckCheck,
   Pencil,
   Check,
+  BookUser,
+  Building2,
+  User,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_app/thread/$id")({ component: ThreadView });
@@ -75,21 +78,82 @@ function ThreadView() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  // ── override phone para @lid ───────────────────────────────────────────────
+  // ── Agenda @lid ───────────────────────────────────────────────────────────
   const isLid = remoteJid.endsWith("@lid");
-  const lidStorageKey = `lid-phone:${remoteJid}`;
-  const [overridePhone, setOverridePhone] = useState<string>(() =>
-    isLid ? (localStorage.getItem(lidStorageKey) ?? "") : "",
-  );
-  const [editingPhone, setEditingPhone] = useState(false);
-  const [phoneInput, setPhoneInput] = useState(overridePhone);
+  const lidStorageKey = `lid-agenda:${remoteJid}`;
 
-  function savePhone() {
-    const clean = phoneInput.replace(/\D/g, "");
-    setOverridePhone(clean);
-    localStorage.setItem(lidStorageKey, clean);
-    setEditingPhone(false);
+  type LidContact = { phone: string; nome: string; empresa: string };
+
+  const [lidContact, setLidContact] = useState<LidContact | null>(() => {
+    if (!isLid) return null;
+    try {
+      const cached = localStorage.getItem(lidStorageKey);
+      return cached ? (JSON.parse(cached) as LidContact) : null;
+    } catch { return null; }
+  });
+  const [editingContact, setEditingContact] = useState(false);
+  const [savingContact, setSavingContact] = useState(false);
+  const [inputNome,    setInputNome]    = useState("");
+  const [inputEmpresa, setInputEmpresa] = useState("");
+  const [inputPhone,   setInputPhone]   = useState("");
+
+  // Busca agenda no servidor ao montar (complementa o cache localStorage)
+  useEffect(() => {
+    if (!isLid) return;
+    fetch(`/api/whatsapp/lid-agenda?jid=${encodeURIComponent(remoteJid)}`)
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => {
+        if (data?.phone) {
+          const entry: LidContact = {
+            phone:   data.phone,
+            nome:    data.nome    ?? "",
+            empresa: data.empresa ?? "",
+          };
+          setLidContact(entry);
+          localStorage.setItem(lidStorageKey, JSON.stringify(entry));
+        }
+      })
+      .catch(() => {/* silencioso */});
+  }, [isLid, remoteJid, lidStorageKey]);
+
+  function openEditContact() {
+    setInputNome(lidContact?.nome    ?? "");
+    setInputEmpresa(lidContact?.empresa ?? "");
+    setInputPhone(lidContact?.phone   ?? "");
+    setEditingContact(true);
   }
+
+  async function saveContact() {
+    const cleanPhone = inputPhone.replace(/\D/g, "");
+    if (!cleanPhone) return;
+    setSavingContact(true);
+    try {
+      const r = await fetch("/api/whatsapp/lid-agenda", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jid:     remoteJid,
+          phone:   cleanPhone,
+          nome:    inputNome.trim()    || null,
+          empresa: inputEmpresa.trim() || null,
+        }),
+      });
+      if (r.ok) {
+        const entry: LidContact = {
+          phone:   cleanPhone,
+          nome:    inputNome.trim(),
+          empresa: inputEmpresa.trim(),
+        };
+        setLidContact(entry);
+        localStorage.setItem(lidStorageKey, JSON.stringify(entry));
+        setEditingContact(false);
+      }
+    } catch { /* silencioso */ }
+    finally { setSavingContact(false); }
+  }
+
+  // overridePhone derivado da agenda (para retrocompatibilidade com o send)
+  const overridePhone = lidContact?.phone ?? "";
 
   const contactName =
     messages.find((m) => !m.from_me)?.push_name ?? jidToPhone(remoteJid);
@@ -216,11 +280,19 @@ function ThreadView() {
         </div>
 
         <div className="min-w-0 flex-1">
-          <p className="truncate font-semibold leading-tight">{contactName}</p>
+          <p className="truncate font-semibold leading-tight">
+            {/* Prioridade: nome da agenda > push_name das mensagens > JID */}
+            {lidContact?.nome || contactName}
+          </p>
           <p className="flex items-center gap-1 text-[11px] text-muted-foreground">
-            <Phone className="h-3 w-3" />
-            {remoteJid.endsWith("@lid")
-              ? <span className="italic text-amber-500">contato @lid (número oculto pelo WhatsApp)</span>
+            {lidContact?.empresa && (
+              <span className="truncate text-muted-foreground">{lidContact.empresa} · </span>
+            )}
+            <Phone className="h-3 w-3 shrink-0" />
+            {isLid
+              ? lidContact?.phone
+                ? <span className="font-mono">{lidContact.phone.replace(/^55(\d{2})(\d{5})(\d{4})$/, "($1) $2-$3")}</span>
+                : <span className="italic text-amber-500">número oculto (@lid)</span>
               : phone}
           </p>
         </div>
@@ -323,66 +395,113 @@ function ThreadView() {
 
       {/* ── Input ──────────────────────────────────────────────────────────── */}
       <div className="border-t bg-card px-4 py-3">
-        {/* Banner @lid com campo de número manual para garantir entrega */}
+        {/* ── Agenda @lid ─────────────────────────────────────────────────── */}
         {isLid && (
-          <div className="mb-2 rounded-lg border border-amber-500/25 bg-amber-500/8 px-3 py-2">
-            {overridePhone && !editingPhone ? (
-              /* Número salvo — mostra com botão de editar */
-              <div className="flex items-center gap-2">
-                <Phone className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
-                <span className="text-[11px] text-muted-foreground">
-                  Enviando para{" "}
-                  <span className="font-mono font-medium text-foreground">
-                    {overridePhone.replace(/^55(\d{2})(\d{5})(\d{4})$/, "($1) $2-$3")}
-                  </span>
-                </span>
+          <div className={cn(
+            "mb-2 rounded-lg border px-3 py-2 text-[11px]",
+            lidContact
+              ? "border-emerald-500/20 bg-emerald-500/6"
+              : "border-amber-500/25 bg-amber-500/8",
+          )}>
+
+            {/* ── Estado: contato salvo na agenda ───────────────────────────── */}
+            {lidContact && !editingContact && (
+              <div className="flex items-start gap-2">
+                <BookUser className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-500" />
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                    {lidContact.nome && (
+                      <span className="font-medium text-foreground">{lidContact.nome}</span>
+                    )}
+                    {lidContact.empresa && (
+                      <span className="text-muted-foreground">· {lidContact.empresa}</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1 text-muted-foreground">
+                    <Phone className="h-2.5 w-2.5" />
+                    <span className="font-mono">
+                      {lidContact.phone.replace(/^55(\d{2})(\d{5})(\d{4})$/, "($1) $2-$3")}
+                    </span>
+                    <span className="ml-1 text-emerald-600 dark:text-emerald-400">✓ entrega ativa</span>
+                  </div>
+                </div>
                 <button
-                  onClick={() => { setPhoneInput(overridePhone); setEditingPhone(true); }}
+                  onClick={openEditContact}
                   className="ml-auto rounded p-0.5 text-muted-foreground hover:text-foreground"
-                  title="Editar número"
+                  title="Editar contato"
                 >
                   <Pencil className="h-3 w-3" />
                 </button>
               </div>
-            ) : editingPhone ? (
-              /* Editando o número */
-              <div className="flex items-center gap-2">
-                <Phone className="h-3.5 w-3.5 shrink-0 text-amber-500" />
-                <input
-                  autoFocus
-                  type="tel"
-                  value={phoneInput}
-                  onChange={(e) => setPhoneInput(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") savePhone(); if (e.key === "Escape") setEditingPhone(false); }}
-                  placeholder="11999999999"
-                  className="flex-1 rounded border bg-background px-2 py-0.5 text-[11px] font-mono outline-none focus:ring-1 focus:ring-amber-400"
-                />
-                <button
-                  onClick={savePhone}
-                  disabled={!phoneInput.replace(/\D/g, "")}
-                  className="rounded bg-emerald-600 p-1 text-white disabled:opacity-40"
-                  title="Salvar"
-                >
-                  <Check className="h-3 w-3" />
-                </button>
-              </div>
-            ) : (
-              /* Sem número ainda — convida a informar */
-              <div className="flex items-center gap-2">
-                <span className="text-[11px] text-amber-600 dark:text-amber-400">⚠️</span>
-                <p className="flex-1 text-[11px] leading-snug text-muted-foreground">
-                  <span className="font-medium text-amber-600 dark:text-amber-400">@lid</span>
-                  {" "}— número oculto pelo WhatsApp.{" "}
+            )}
+
+            {/* ── Estado: formulário de edição / cadastro ───────────────────── */}
+            {(editingContact || !lidContact) && (
+              <div className="space-y-1.5">
+                {!lidContact && (
+                  <p className="mb-1.5 text-amber-600 dark:text-amber-400">
+                    ⚠️ <span className="font-medium">@lid</span> — número oculto pelo WhatsApp.
+                    Cadastre o contato para entregar mensagens.
+                  </p>
+                )}
+                <div className="grid grid-cols-2 gap-1.5">
+                  <div className="flex items-center gap-1 rounded border bg-background px-2 py-1">
+                    <User className="h-3 w-3 shrink-0 text-muted-foreground" />
+                    <input
+                      autoFocus={!lidContact}
+                      type="text"
+                      value={inputNome}
+                      onChange={(e) => setInputNome(e.target.value)}
+                      placeholder="Nome"
+                      className="flex-1 bg-transparent text-[11px] outline-none placeholder:text-muted-foreground"
+                    />
+                  </div>
+                  <div className="flex items-center gap-1 rounded border bg-background px-2 py-1">
+                    <Building2 className="h-3 w-3 shrink-0 text-muted-foreground" />
+                    <input
+                      type="text"
+                      value={inputEmpresa}
+                      onChange={(e) => setInputEmpresa(e.target.value)}
+                      placeholder="Empresa"
+                      className="flex-1 bg-transparent text-[11px] outline-none placeholder:text-muted-foreground"
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="flex flex-1 items-center gap-1 rounded border bg-background px-2 py-1">
+                    <Phone className="h-3 w-3 shrink-0 text-amber-500" />
+                    <input
+                      autoFocus={!!lidContact}
+                      type="tel"
+                      value={inputPhone}
+                      onChange={(e) => setInputPhone(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter") saveContact(); if (e.key === "Escape") { if (lidContact) setEditingContact(false); } }}
+                      placeholder="Telefone: 11999999999 *"
+                      className="flex-1 bg-transparent font-mono text-[11px] outline-none placeholder:text-muted-foreground"
+                    />
+                  </div>
+                  {lidContact && (
+                    <button
+                      onClick={() => setEditingContact(false)}
+                      className="rounded border px-2 py-1 text-[11px] text-muted-foreground hover:text-foreground"
+                    >
+                      Cancelar
+                    </button>
+                  )}
                   <button
-                    onClick={() => setEditingPhone(true)}
-                    className="font-medium text-amber-600 underline underline-offset-2 hover:text-amber-700 dark:text-amber-400"
+                    onClick={saveContact}
+                    disabled={!inputPhone.replace(/\D/g, "") || savingContact}
+                    className="flex items-center gap-1 rounded bg-emerald-600 px-2.5 py-1 text-[11px] font-medium text-white disabled:opacity-40"
                   >
-                    Informar número do cliente
+                    {savingContact
+                      ? <RefreshCw className="h-3 w-3 animate-spin" />
+                      : <Check className="h-3 w-3" />}
+                    Salvar
                   </button>
-                  {" "}para entregar as mensagens.
-                </p>
+                </div>
               </div>
             )}
+
           </div>
         )}
 
