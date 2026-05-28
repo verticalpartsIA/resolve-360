@@ -1,10 +1,9 @@
 import { createClient } from "@supabase/supabase-js";
 
 // ─── config ───────────────────────────────────────────────────────────────────
-const HERMES_URL   = () => process.env.HERMES_URL   ?? "http://72.61.48.156:32768";
-const HERMES_MODEL = () => process.env.HERMES_MODEL ?? "claude-haiku-4-5";
-const EVO_URL      = "http://72.61.48.156:8080";
-const EVO_INSTANCE = "pv360";
+const CLAUDE_MODEL  = () => process.env.HERMES_MODEL ?? "claude-haiku-4-5";
+const EVO_URL       = "http://72.61.48.156:8080";
+const EVO_INSTANCE  = "pv360";
 const HISTORY_LIMIT = 20;
 const TIMEOUT_MS    = 30_000;
 
@@ -42,28 +41,65 @@ IMPORTANTE:
 - Se a situação for urgente ou complexa, avise que vai acionar a equipe técnica imediatamente`;
 
 // ─── tipos internos ───────────────────────────────────────────────────────────
-type HermesMsg = { role: "system" | "user" | "assistant"; content: string };
-type HermesResp = { message?: { role: string; content: string }; done?: boolean };
+type ChatMsg = { role: "user" | "assistant"; content: string };
+type AnthropicResp = { content?: Array<{ type: string; text: string }> };
 
-// ─── chamada ao Hermes ────────────────────────────────────────────────────────
-async function callHermes(history: HermesMsg[]): Promise<string | null> {
-  const messages: HermesMsg[] = [{ role: "system", content: SYSTEM_PROMPT }, ...history];
+// ─── normaliza histórico ──────────────────────────────────────────────────────
+// A API Anthropic exige alternância user/assistant. Une mensagens consecutivas
+// do mesmo papel e garante que a primeira mensagem seja "user".
+function normalizeHistory(msgs: ChatMsg[]): ChatMsg[] {
+  const out: ChatMsg[] = [];
+  for (const msg of msgs) {
+    const last = out[out.length - 1];
+    if (last && last.role === msg.role) {
+      last.content += "\n" + msg.content;
+    } else {
+      out.push({ ...msg });
+    }
+  }
+  // primeiro turno deve ser "user"
+  if (out.length > 0 && out[0].role === "assistant") out.shift();
+  return out;
+}
+
+// ─── chamada direta à API Anthropic (Claude) ──────────────────────────────────
+async function callClaude(history: ChatMsg[]): Promise<string | null> {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    console.error("[hermes] ANTHROPIC_API_KEY não configurada");
+    return null;
+  }
+
+  const messages = normalizeHistory(history);
+  if (messages.length === 0) {
+    console.warn("[hermes] histórico vazio após normalização");
+    return null;
+  }
 
   try {
-    const res = await fetch(`${HERMES_URL()}/api/chat`, {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ model: HERMES_MODEL(), stream: false, messages }),
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: CLAUDE_MODEL(),
+        max_tokens: 1024,
+        system: SYSTEM_PROMPT,
+        messages,
+      }),
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
 
     if (!res.ok) {
-      console.error(`[hermes] HTTP ${res.status}:`, await res.text().catch(() => ""));
+      console.error(`[hermes] Anthropic HTTP ${res.status}:`, await res.text().catch(() => ""));
       return null;
     }
 
-    const data = (await res.json()) as HermesResp;
-    return data?.message?.content?.trim() || null;
+    const data = (await res.json()) as AnthropicResp;
+    return data?.content?.[0]?.text?.trim() || null;
   } catch (err) {
     console.error("[hermes] call error:", err instanceof Error ? err.message : String(err));
     return null;
@@ -94,6 +130,9 @@ export async function autoReplyWithHermes(params: {
   // Não responde mídia pura (sem texto)
   if (MEDIA_ONLY.has(body.toLowerCase())) return;
 
+  // @lid = identificador anônimo do WhatsApp (usuários via widget do site)
+  // Para esses contatos: busca histórico pelo remoteJid completo e envia com o JID completo
+  const isLid = remoteJid.endsWith("@lid");
   const phone = remoteJid
     .replace("@s.whatsapp.net", "")
     .replace("@lid", "")
@@ -103,11 +142,14 @@ export async function autoReplyWithHermes(params: {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
-  // Busca histórico completo por número (usa coluna phone gerada)
-  const { data: history, error: histErr } = await sb
-    .from("whatsapp_messages")
-    .select("body, from_me")
-    .eq("phone", phone)
+  // Busca histórico:
+  //   - @lid: filtra por remote_jid (não tem phone real)
+  //   - número normal: filtra pela coluna gerada phone
+  const histQuery = isLid
+    ? sb.from("whatsapp_messages").select("body, from_me").eq("remote_jid", remoteJid)
+    : sb.from("whatsapp_messages").select("body, from_me").eq("phone", phone);
+
+  const { data: history, error: histErr } = await histQuery
     .order("created_at", { ascending: true })
     .limit(HISTORY_LIMIT);
 
@@ -116,19 +158,25 @@ export async function autoReplyWithHermes(params: {
     return;
   }
 
-  // Monta histórico para o Hermes
-  const messages: HermesMsg[] = (history ?? []).map((m) => ({
+  // Monta histórico para o Claude
+  const messages: ChatMsg[] = (history ?? []).map((m) => ({
     role: (m.from_me ? "assistant" : "user") as "user" | "assistant",
     content: m.body,
   }));
 
-  console.log(`[hermes] chamando para ${pushName ?? phone} (${messages.length} msgs de histórico)`);
+  const label = pushName ?? (isLid ? `lid:${phone.slice(0, 8)}` : phone);
+  console.log(`[hermes] chamando Claude para ${label} (${messages.length} msgs de histórico)`);
 
-  const reply = await callHermes(messages);
+  const reply = await callClaude(messages);
   if (!reply) {
     console.warn("[hermes] sem resposta gerada para", remoteJid);
     return;
   }
+
+  // Número de envio:
+  //   - @lid: Evolution API aceita o JID completo (ex: 123456@lid)
+  //   - normal: usa o número puro (ex: 5511999999999)
+  const sendNumber = isLid ? remoteJid : phone;
 
   // Envia via Evolution API
   try {
@@ -138,7 +186,7 @@ export async function autoReplyWithHermes(params: {
         "Content-Type": "application/json",
         apikey: process.env.EVOLUTION_APIKEY ?? "suporte123",
       },
-      body: JSON.stringify({ number: phone, text: reply }),
+      body: JSON.stringify({ number: sendNumber, text: reply }),
     });
 
     if (!r.ok) {
