@@ -277,7 +277,9 @@ VOCÊ PODE AJUDAR COM:
 
 CONSULTAS NO SISTEMA (ferramentas):
 - Você tem ferramentas para consultar o ERP: "buscar_cliente" (por CNPJ/CPF ou nome), "buscar_nota_fiscal" (por número da NF) e "buscar_pedido" (por número do pedido).
-- Use-as quando o cliente perguntar sobre uma NF, um pedido, ou para confirmar o cadastro dele. NUNCA invente dados: se a ferramenta não encontrar, diga que não localizou e peça os dados corretos.
+- Use-as quando o cliente perguntar sobre uma NF, um pedido, ou para confirmar o cadastro dele. NUNCA invente dados: se a ferramenta não encontrar, diga que não localizou.
+- Número da NF e número do PEDIDO são coisas diferentes. Se o cliente der um número e você NÃO achar como nota fiscal, ofereça verificar como número de pedido (use buscar_pedido) — e vice-versa, antes de dizer que não existe.
+- NÃO exija que o cliente digite os zeros à esquerda: a busca já trata isso (ex.: "13614" e "00013614" são equivalentes). Não fique pedindo o "número completo" por causa de zeros.
 - ANTES de revelar detalhes de um pedido/NF, confirme a identidade do cliente (ex.: peça o CNPJ e confira com buscar_cliente). Não exponha dados de um cliente para outra pessoa.
 - Relate os resultados em linguagem simples; nunca cite nomes internos de tabelas/campos.
 
@@ -367,11 +369,22 @@ async function execAtendenteTool(name, input = {}) {
       return rows.length ? { encontrado: true, clientes: rows } : { encontrado: false };
     }
     if (name === "buscar_nota_fiscal") {
-      const core = _digits(input.numero_nf).replace(/^0+/, "");
-      const r = await erpFetch(`/omie_nfe_emitidas?select=numero_nf,serie,status_nfe,data_emissao,data_saida,valor_total_nf,natureza_operacao,nome_destinatario,cnpj_cpf_destinatario,codigo_pedido_omie,chave_nfe,url_pdf&or=(numero_nf.eq.${_enc(input.numero_nf)},numero_nf.ilike.*${_enc(core)})&limit=5`);
+      // NFs de venda reais estão em omie_nfe_itens (tipo=S), nível item — agregamos por NF.
+      // numero_nfe é texto com zeros à esquerda; o cliente pode digitar sem os zeros.
+      const core = _digits(input.numero_nf).replace(/^0+/, "") || _digits(input.numero_nf);
+      const r = await erpFetch(`/omie_nfe_itens?select=numero_nfe,tipo,data_emissao,nome_parceiro,cnpj_parceiro,chave_nfe,descricao,quantidade,valor_total&tipo=eq.S&or=(numero_nfe.eq.${_enc(input.numero_nf)},numero_nfe.ilike.*${_enc(core)})&limit=80`);
       if (!r.ok) return { erro: `falha na consulta (${r.status})` };
       const rows = await r.json();
-      return rows.length ? { encontrado: true, notas: rows } : { encontrado: false };
+      if (!rows.length) return { encontrado: false };
+      const byNf = {};
+      for (const it of rows) {
+        const k = it.numero_nfe;
+        if (!byNf[k]) byNf[k] = { numero_nf: k, data_emissao: it.data_emissao, cliente: it.nome_parceiro, cnpj_cliente: it.cnpj_parceiro, chave_nfe: it.chave_nfe, valor_total: 0, itens: [] };
+        byNf[k].valor_total += Number(it.valor_total) || 0;
+        byNf[k].itens.push({ descricao: it.descricao, quantidade: it.quantidade, valor_total: it.valor_total });
+      }
+      const notas = Object.values(byNf).map((n) => ({ ...n, valor_total: Math.round(n.valor_total * 100) / 100, qtd_itens: n.itens.length }));
+      return { encontrado: true, notas };
     }
     if (name === "buscar_pedido") {
       const r = await erpFetch(`/omie_orders?select=numero_pedido,etapa,status,numero_nf,chave_nfe,valor_total_pedido,data_previsao,data_inclusao,codigo_cliente_omie,observacao&or=(numero_pedido.eq.${_enc(input.numero_pedido)},numero_pedido.ilike.*${_enc(_digits(input.numero_pedido))})&limit=5`);
@@ -1101,7 +1114,7 @@ const server = http.createServer(async (req, res) => {
       const claudeKey = ANTHROPIC_KEY();
       const notifyUrl = NOTIFY_URL();
       res.end(JSON.stringify({
-        deploy_version: "verti-1.0",
+        deploy_version: "verti-1.1",
         claude_key_set: claudeKey.length > 0,
         claude_key_prefix: claudeKey ? claudeKey.slice(0, 12) + "..." : null,
         claude_model: CLAUDE_MODEL(),
