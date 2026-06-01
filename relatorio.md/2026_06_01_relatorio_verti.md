@@ -100,9 +100,46 @@ comportamental do spec será adotada por cima do que já funciona (próxima etap
 ## 8. Referência rápida
 
 - App pv360: `posvenda360.vpsistema.com` (Hostinger Node) · deploy = push na `main` do resolve-360.
-- Diagnóstico: `/api/whatsapp/status` e `/api/whatsapp/test-claude`.
-- ERP: Supabase `kgecbycsyrtdhmdziuul`. Tabelas usadas: `PN_Omie`, `omie_nfe_emitidas`, `omie_orders`.
+- Diagnóstico: `/api/whatsapp/status` e `/api/whatsapp/test-claude` (campo `deploy_version` indica a versão no ar).
+- ERP: Supabase `kgecbycsyrtdhmdziuul`. Tabelas usadas: `PN_Omie` (clientes), **`omie_nfe_itens` (tipo='S' = NFs de venda reais)**, `omie_orders` (pedidos).
 - WhatsApp: Evolution v2.3.7 (porta 8080, key `suporte123`), instância `pv360` conectada.
+
+---
+
+## 9. Atualizações pós-v1.0 (mesma sessão — v1.1 a v1.3)
+
+### v1.1 — Correção da busca de Nota Fiscal (commit `e209e9b`)
+Num teste real, a Verti não achava a NF 13614. Diagnóstico:
+- A busca apontava para **`omie_nfe_emitidas`**, que estava **praticamente vazia** (5 NFs de teste de 2017). ❌
+- As **NFs de venda reais (22.549)** estão em **`omie_nfe_itens` com `tipo='S'`** (nível item — agregamos por `numero_nfe`; campos `nome_parceiro`, `cnpj_parceiro`, `valor_total`, `chave_nfe`). ✅
+- `numero_nfe` é texto com **zeros à esquerda** ("00013614"); a busca trata sem exigir os zeros ("13614" = "00013614").
+- A NF 13614 **existia de verdade** (ELEVADORES ATLAS SCHINDLER, R$ 2.636,60, 03/01/2024).
+- Verti aprendeu que **NF ≠ pedido**: se um número não bate como NF, ela oferece checar como pedido.
+
+### v1.2 — Reconhecimento por telefone, contatos internos e TRAVA DE SEGURANÇA (commit `1d24baf`)
+Outro teste revelou uma falha grave de privacidade: a Verti **entregava os dados da NF antes de validar** quem perguntava. Corrigido:
+- **Validar primeiro, revelar depois** (princípio do "policial": pode perguntar, mas não entrega dado sem validar).
+- **Reconhecimento por telefone:** ao chegar a mensagem, o sistema cruza o nº do WhatsApp com `PN_Omie.telefone` (formato "(DD) NNNNN-NNNN"; ~76% dos clientes têm telefone). Se reconhece, a Verti cumprimenta **pela razão social** e a identidade já fica **pré-validada**.
+- **Trava de segurança real (nível dado):** `buscar_nota_fiscal` exige `cnpj_cliente` (filtra `cnpj_parceiro`) e `buscar_pedido` exige `codigo_cliente_omie`. Resultado: a Verti **só vê dados do cliente validado** — testado: a NF 13614 aparece para o CNPJ da Schindler e vem **vazia** para qualquer outro CNPJ (sem vazamento entre clientes).
+- **Introdução:** se o número não é reconhecido, a Verti se apresenta e pede **nome + empresa + CNPJ** + menu de opções (① pedido/NF · ② devolução/troca · ③ garantia · ④ dúvida técnica · ⑤ atendente).
+
+### v1.3 — Contatos internos/VIP da equipe (commit `d4a7d64`)
+- Cadastrados em `INTERNAL_CONTACTS` (chave = telefone só dígitos, DDD+número). Números já recebidos (9):
+  Diego Maeno/CEO, Guilherme Garcia, Victoria Martins, Bianca Maeno, Giovanna Maeno, Andreia Oliveira,
+  Gelson Simões, Matheus Rocha, Maria Fernanda.
+- Quando um interno escreve, a Verti reconhece pelo nome e dá tratamento de equipe (saudação calorosa
+  só na 1ª mensagem). Ex. (CEO): *"Olá Diego, que prazer falar com você! Eu sou a Verti, conte comigo sempre 😊"*.
+- ⚠️ Faltam os números dos demais colaboradores (Comercial, Qualidade, Adm/RH/Fin, Marketing, Compras,
+  Logística, Montagem, Operações) — Gelson vai enviar. OBS: o nº do Gelson (11 99766-3780) é o **mesmo da
+  linha do bot**.
+
+### Versão em produção: **`verti-1.3`** (confirmada via `/api/whatsapp/status`).
+
+### Lições desta etapa
+- NFs reais → `omie_nfe_itens` (tipo='S'), NÃO `omie_nfe_emitidas` (vazia).
+- Segurança de dados de cliente deve ser imposta **no nível da ferramenta** (filtro por CNPJ/código), não só
+  confiando no comportamento do modelo.
+- O próprio número de WhatsApp é um forte sinal de identidade — usar para reconhecer e pré-validar.
 
 ---
 
