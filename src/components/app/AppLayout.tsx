@@ -1,7 +1,7 @@
 import { Link, Outlet, useRouterState, useNavigate } from "@tanstack/react-router";
 import {
   LayoutDashboard, FileText, PlusCircle, Ticket, Smile, Package, Building2,
-  BarChart3, MessageCircle, Settings, Bell, Search, LogOut, ChevronDown,
+  BarChart3, MessageCircle, Settings, Bell, Search, LogOut, ChevronDown, Headphones,
 } from "lucide-react";
 import { Logo } from "./Logo";
 import { cn } from "@/lib/utils";
@@ -34,6 +34,12 @@ const groups: NavGroup[] = [
     items: [
       { to: "/nps/dashboard", label: "NPS", icon: Smile },
       { to: "/gestor/kpis", label: "KPIs Gestor", icon: BarChart3, roles: ["gestor", "admin"] },
+    ],
+  },
+  {
+    title: "SAC",
+    items: [
+      { to: "/sac", label: "SAC", icon: Headphones },
     ],
   },
   {
