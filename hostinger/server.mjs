@@ -1355,12 +1355,15 @@ async function ingerirNFOmie(nfData, { skipNotify = false } = {}) {
   const nfNumero  = String(nfData.compl?.nNumNF || nfData.ide?.nNF || "?");
   const chaveNFe  = nfData.compl?.cChaveNFe || null;
   const dataEmissao = parseDateBR(nfData.ide?.dEmi) || new Date().toISOString().slice(0, 10);
-  const valorTotal  = Number(nfData.total?.vNF ?? nfData.total?.vTotTrib ?? 0);
+  // vNF fica dentro de total.ICMSTot.vNF na estrutura do nfconsultar/ListarNF
+  const valorTotal  = Number(
+    nfData.total?.ICMSTot?.vNF ?? nfData.total?.vNF ?? nfData.total?.vTotTrib ?? 0
+  );
   const classeAbc   = classificarABC(valorTotal);
 
-  // Destinatário (cliente)
-  const cnpjRaw    = String(nfData.nfDestInt?.cCPFCNPJ || "").replace(/\D/g, "");
-  const razaoSocial = nfData.nfDestInt?.cNome || "—";
+  // Destinatário: ListarNF usa cRazao e cnpj_cpf (não cNome/cCPFCNPJ)
+  const cnpjRaw    = String(nfData.nfDestInt?.cnpj_cpf || nfData.nfDestInt?.cCPFCNPJ || "").replace(/\D/g, "");
+  const razaoSocial = nfData.nfDestInt?.cRazao || nfData.nfDestInt?.cNome || "—";
   const codigoOmie  = nfData.nfDestInt?.nCodCli || null;
 
   // Pedido vinculado (se Omie disponibilizar no campo compl)
