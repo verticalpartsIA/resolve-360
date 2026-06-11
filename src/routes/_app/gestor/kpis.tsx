@@ -109,7 +109,7 @@ function ManagerDashboard() {
 
   // ===== KPI 5: Custo da Não Qualidade =====
   const cnqByCause: Record<RootCause, number> = {
-    venda: 0, expedicao: 0, engenharia: 0, cliente: 0, fornecedor: 0,
+    venda: 0, expedicao: 0, engenharia: 0, cliente: 0, fornecedor: 0, produto: 0, producao: 0,
   };
   let cnqTotal = 0;
   closed.forEach((t) => {
@@ -145,10 +145,32 @@ function ManagerDashboard() {
 
   // Causa raiz (counts)
   const causeCounts: Record<RootCause, number> = {
-    venda: 0, expedicao: 0, engenharia: 0, cliente: 0, fornecedor: 0,
+    venda: 0, expedicao: 0, engenharia: 0, cliente: 0, fornecedor: 0, produto: 0, producao: 0,
   };
   closed.forEach((t) => t.rootCause && (causeCounts[t.rootCause] += 1));
   const maxCause = Math.max(1, ...Object.values(causeCounts));
+
+  // ===== Dashboard: Ocorrências por Mês =====
+  const byMonth: Record<string, { count: number; cost: number }> = {};
+  ticketsInPeriod.forEach((t) => {
+    const month = t.createdAt.slice(0, 7);
+    if (!byMonth[month]) byMonth[month] = { count: 0, cost: 0 };
+    byMonth[month].count += 1;
+    byMonth[month].cost += (t.custoNaoQualidade ?? 0) + (t.freightCostVp ?? 0);
+  });
+  const monthEntries = Object.entries(byMonth).sort(([a], [b]) => a.localeCompare(b));
+  const maxMonthCount = Math.max(1, ...monthEntries.map(([, v]) => v.count));
+
+  // ===== Dashboard: Ocorrências por Família de Produto =====
+  const byFamily: Record<string, { count: number; cost: number }> = {};
+  ticketsInPeriod.forEach((t) => {
+    const fam = t.productFamily?.trim() || "Não informada";
+    if (!byFamily[fam]) byFamily[fam] = { count: 0, cost: 0 };
+    byFamily[fam].count += 1;
+    byFamily[fam].cost += (t.custoNaoQualidade ?? 0) + (t.freightCostVp ?? 0);
+  });
+  const familyEntries = Object.entries(byFamily).sort(([, a], [, b]) => b.count - a.count).slice(0, 10);
+  const maxFamilyCount = Math.max(1, ...familyEntries.map(([, v]) => v.count));
 
   const atRisk = mounted
     ? tickets.filter((t) => t.status !== "concluido" && slaStatus(t).tone !== "ok")
@@ -301,6 +323,59 @@ function ManagerDashboard() {
           </ul>
         </section>
       </div>
+
+      {/* Nº e R$ por Mês */}
+      {monthEntries.length > 0 && (
+        <section className="rounded-xl border bg-card p-6 shadow-[var(--shadow-elegant)]">
+          <h2 className="text-base font-semibold">Ocorrências por mês</h2>
+          <p className="text-xs text-muted-foreground">Nº de ocorrências e custo (R$) no período selecionado</p>
+          <ul className="mt-5 space-y-3">
+            {monthEntries.map(([month, v]) => {
+              const label = new Date(month + "-01").toLocaleDateString("pt-BR", { month: "short", year: "numeric" });
+              return (
+                <li key={month}>
+                  <div className="mb-1 flex items-center justify-between text-xs">
+                    <span className="font-medium capitalize">{label}</span>
+                    <span className="flex gap-3 font-semibold">
+                      <span>{v.count} oc.</span>
+                      {v.cost > 0 && <span className="text-destructive/80">{brl(v.cost)}</span>}
+                    </span>
+                  </div>
+                  <div className="h-2 overflow-hidden rounded-full bg-muted">
+                    <div className="h-full bg-[var(--gradient-gold)]" style={{ width: `${(v.count / maxMonthCount) * 100}%` }} />
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
+
+      {/* Nº e R$ por Família de Produto */}
+      <section className="rounded-xl border bg-card p-6 shadow-[var(--shadow-elegant)]">
+        <h2 className="text-base font-semibold">Ocorrências por família de produto</h2>
+        <p className="text-xs text-muted-foreground">Top 10 famílias · Nº de ocorrências e custo</p>
+        {familyEntries.length === 0 ? (
+          <p className="mt-4 text-center text-sm text-muted-foreground">Nenhum dado de família de produto registrado ainda.</p>
+        ) : (
+          <ul className="mt-5 space-y-3">
+            {familyEntries.map(([fam, v]) => (
+              <li key={fam}>
+                <div className="mb-1 flex items-center justify-between text-xs">
+                  <span className="font-medium">{fam}</span>
+                  <span className="flex gap-3 font-semibold">
+                    <span>{v.count} oc.</span>
+                    {v.cost > 0 && <span className="text-destructive/80">{brl(v.cost)}</span>}
+                  </span>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-muted">
+                  <div className="h-full bg-primary/60" style={{ width: `${(v.count / maxFamilyCount) * 100}%` }} />
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       <p className="text-center text-[11px] text-muted-foreground">
         <TrendingUp className="mr-1 inline h-3 w-3" /> Widgets atualizam automaticamente a cada nova resposta · Use <Download className="mx-1 inline h-3 w-3" /> para exportar

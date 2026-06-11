@@ -13,7 +13,7 @@ import {
 } from "@/lib/types";
 import { StatusBadge, PriorityBadge } from "@/components/app/StatusBadge";
 import { SlaBar } from "@/components/app/SlaBar";
-import { ArrowLeft, ShieldCheck, Clock, User, MessageCircle, FileEdit, Star, AlertTriangle, Users, Plus, RefreshCw } from "lucide-react";
+import { ArrowLeft, ShieldCheck, Clock, User, MessageCircle, FileEdit, Star, AlertTriangle, Users, Plus, RefreshCw, ImageIcon, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app/ocorrencia/$ro")({ component: TicketDetail });
@@ -49,7 +49,17 @@ function TicketDetail() {
   const [justification, setJustification] = useState("");
   const [report, setReport] = useState("");
   const [resolveErr, setResolveErr] = useState<string | null>(null);
+  const [resolvePhotos, setResolvePhotos] = useState<{ name: string; url: string }[]>([]);
   const [openInternal, setOpenInternal] = useState(false);
+
+  function handleResolvePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    setResolvePhotos((prev) => [...prev, ...files.map((f) => ({ name: f.name, url: URL.createObjectURL(f) }))]);
+    e.target.value = "";
+  }
+  function removeResolvePhoto(idx: number) {
+    setResolvePhotos((prev) => { URL.revokeObjectURL(prev[idx].url); return prev.filter((_, i) => i !== idx); });
+  }
 
   const linkedInternal = internalTickets.filter((it) => ticket?.internalTicketIds?.includes(it.id));
 
@@ -157,6 +167,28 @@ function TicketDetail() {
               <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Laudo técnico *</span>
               <textarea value={report} onChange={(e) => setReport(e.target.value)} rows={4} className="mt-1.5 w-full rounded-md border bg-background px-3 py-2 text-sm" placeholder="Descrição da análise, evidências e ação corretiva..." />
             </label>
+            <div>
+              <div className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                <ImageIcon className="mr-1 inline h-3.5 w-3.5" />Fotos / Evidências
+              </div>
+              <label className="flex cursor-pointer items-center gap-2 rounded-md border border-input bg-background px-3 py-2 text-sm text-muted-foreground hover:border-gold">
+                <ImageIcon className="h-4 w-4" />
+                <span>Selecionar imagens…</span>
+                <input type="file" multiple accept="image/*" className="hidden" onChange={handleResolvePhotoChange} />
+              </label>
+              {resolvePhotos.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {resolvePhotos.map((p, i) => (
+                    <div key={i} className="group relative h-20 w-20 overflow-hidden rounded-md border bg-muted">
+                      <img src={p.url} alt={p.name} className="h-full w-full object-cover" />
+                      <button type="button" onClick={() => removeResolvePhoto(i)} className="absolute right-0.5 top-0.5 hidden h-5 w-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground group-hover:flex">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
             {resolveErr && <div className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">{resolveErr}</div>}
             <div className="flex justify-end gap-2">
               <button onClick={() => setResolving(false)} className="rounded-md border px-4 py-2 text-sm hover:bg-muted">Cancelar</button>
@@ -194,6 +226,20 @@ function TicketDetail() {
               <dt className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Laudo técnico</dt>
               <dd className="mt-1 whitespace-pre-wrap rounded-md bg-muted/50 p-3 text-sm">{ticket.technicalReport}</dd>
             </div>
+            {resolvePhotos.length > 0 && (
+              <div className="sm:col-span-2">
+                <dt className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  <ImageIcon className="mr-1 inline h-3 w-3" />Fotos anexadas ({resolvePhotos.length})
+                </dt>
+                <dd className="mt-2 flex flex-wrap gap-2">
+                  {resolvePhotos.map((p, i) => (
+                    <a key={i} href={p.url} target="_blank" rel="noopener noreferrer" title={p.name}>
+                      <img src={p.url} alt={p.name} className="h-20 w-20 rounded-md border object-cover hover:opacity-80" />
+                    </a>
+                  ))}
+                </dd>
+              </div>
+            )}
           </dl>
         </div>
       )}
@@ -303,7 +349,17 @@ function QuickInternalDialog({
     description: "",
     slaHours: 24,
   });
+  const [intPhotos, setIntPhotos] = useState<{ name: string; url: string }[]>([]);
   const valid = form.subject.trim() && form.description.trim();
+
+  function handleIntPhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    setIntPhotos((prev) => [...prev, ...files.map((f) => ({ name: f.name, url: URL.createObjectURL(f) }))]);
+    e.target.value = "";
+  }
+  function removeIntPhoto(idx: number) {
+    setIntPhotos((prev) => { URL.revokeObjectURL(prev[idx].url); return prev.filter((_, i) => i !== idx); });
+  }
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="w-full max-w-lg rounded-xl border bg-card p-6 shadow-[var(--shadow-elegant)]">
@@ -352,6 +408,25 @@ function QuickInternalDialog({
             className="w-full rounded-md border bg-background px-3 py-2 text-sm"
             placeholder="Descrição..."
           />
+          <div>
+            <label className="flex cursor-pointer items-center gap-2 rounded-md border border-input bg-background px-3 py-2 text-sm text-muted-foreground hover:border-gold">
+              <ImageIcon className="h-4 w-4" />
+              <span>Fotos / evidências (opcional)</span>
+              <input type="file" multiple accept="image/*" className="hidden" onChange={handleIntPhotoChange} />
+            </label>
+            {intPhotos.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {intPhotos.map((p, i) => (
+                  <div key={i} className="group relative h-16 w-16 overflow-hidden rounded-md border bg-muted">
+                    <img src={p.url} alt={p.name} className="h-full w-full object-cover" />
+                    <button type="button" onClick={() => removeIntPhoto(i)} className="absolute right-0.5 top-0.5 hidden h-4 w-4 items-center justify-center rounded-full bg-destructive text-destructive-foreground group-hover:flex">
+                      <X className="h-2.5 w-2.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
         <div className="mt-5 flex justify-end gap-2">
           <button onClick={onClose} className="rounded-md border px-4 py-2 text-sm hover:bg-muted">Cancelar</button>

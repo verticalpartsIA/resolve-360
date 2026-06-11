@@ -20,7 +20,7 @@ import {
 } from "@/lib/types";
 import type { OmieCliente, OmieProduto } from "@/integrations/supabase/erp-client";
 import { fetchClientesAtivosFn, fetchProdutosAtivosFn } from "@/integrations/supabase/erp-server-fn";
-import { MessageCircle, FileEdit, Check, Bell, Mail, Phone, Search } from "lucide-react";
+import { MessageCircle, FileEdit, Check, Bell, Mail, Phone, Search, ImageIcon, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app/nova-ocorrencia")({
@@ -63,6 +63,7 @@ function NewTicket() {
     part: "",
     partCode: "",
     vendedor: "",
+    productFamily: "",
     nfNumero: "",
     nfValor: 0,
     quantity: 1,
@@ -77,6 +78,7 @@ function NewTicket() {
     emitente: "",
     whatsappThreadId: "",
   });
+  const [photos, setPhotos] = useState<{ name: string; url: string }[]>([]);
   const [contencao, setContencao] = useState<ContainmentAction[]>([]);
   const [openInternal, setOpenInternal] = useState(false);
   const [internal, setInternal] = useState({
@@ -144,9 +146,24 @@ function NewTicket() {
       ...f,
       part: p.descricao,
       partCode: p.codigo ?? p.codigo_produto,
+      productFamily: p.codigo_familia ?? "",
     }));
     setPartQuery(p.descricao);
     setShowPartSuggest(false);
+  }
+
+  function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    const newPhotos = files.map((file) => ({ name: file.name, url: URL.createObjectURL(file) }));
+    setPhotos((prev) => [...prev, ...newPhotos]);
+    e.target.value = "";
+  }
+
+  function removePhoto(idx: number) {
+    setPhotos((prev) => {
+      URL.revokeObjectURL(prev[idx].url);
+      return prev.filter((_, i) => i !== idx);
+    });
   }
 
   function toggleContencao(a: ContainmentAction) {
@@ -332,7 +349,7 @@ function NewTicket() {
                             <button type="button" onClick={() => pickPart(p)} className="flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left text-sm hover:bg-muted">
                               <span className="font-medium">{p.descricao}</span>
                               <span className="text-xs text-muted-foreground">
-                                {p.codigo_produto ?? p.codigo}{p.marca ? ` · ${p.marca}` : ""}{p.unidade ? ` · ${p.unidade}` : ""}
+                                {p.codigo_produto ?? p.codigo}{p.marca ? ` · ${p.marca}` : ""}{p.codigo_familia ? ` · Família: ${p.codigo_familia}` : ""}{p.unidade ? ` · ${p.unidade}` : ""}
                               </span>
                             </button>
                           </li>
@@ -384,6 +401,9 @@ function NewTicket() {
               <Field label="Quantidade">
                 <input type="number" min={1} value={form.quantity} onChange={(e) => setForm({ ...form, quantity: Number(e.target.value) })} className={inputCls} />
               </Field>
+              <Field label="Família do produto">
+                <input value={form.productFamily} onChange={(e) => setForm({ ...form, productFamily: e.target.value })} className={inputCls} placeholder="Preenchido automaticamente ao selecionar o produto" />
+              </Field>
               <Field label="Vendedor">
                 <input value={form.vendedor} onChange={(e) => setForm({ ...form, vendedor: e.target.value })} className={inputCls} placeholder="Responsável pela venda" />
               </Field>
@@ -394,10 +414,34 @@ function NewTicket() {
               <p className="mt-1 text-[11px] text-muted-foreground">💡 Dica: descreva o ocorrido sem apontar culpados. O objetivo é entender para atender.</p>
             </Field>
 
-            <Field label="Fotos (upload)">
-              <input type="file" multiple accept="image/*" className={cn(inputCls, "py-1.5")} />
-              <p className="mt-1 text-[11px] text-muted-foreground">Imagens são comprimidas automaticamente antes do envio.</p>
-            </Field>
+            <div>
+              <label className="block space-y-1.5">
+                <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  <ImageIcon className="mr-1 inline h-3.5 w-3.5" />Fotos / Evidências
+                </span>
+                <label className={cn(inputCls, "flex cursor-pointer items-center gap-2 py-1.5 text-muted-foreground hover:border-gold")}>
+                  <ImageIcon className="h-4 w-4" />
+                  <span className="text-sm">Selecionar imagens…</span>
+                  <input type="file" multiple accept="image/*" className="hidden" onChange={handlePhotoChange} />
+                </label>
+              </label>
+              {photos.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {photos.map((p, i) => (
+                    <div key={i} className="group relative h-20 w-20 overflow-hidden rounded-md border bg-muted">
+                      <img src={p.url} alt={p.name} className="h-full w-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => removePhoto(i)}
+                        className="absolute right-0.5 top-0.5 hidden h-5 w-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground group-hover:flex"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -522,6 +566,7 @@ function NewTicket() {
                   <ReviewRow label="Canal" value={channel === "whatsapp" ? "WhatsApp" : "Manual"} />
                   <ReviewRow label="Cliente" value={`${form.customer} · ${form.customerDoc}`} />
                   <ReviewRow label="Produto" value={`${form.part} (${form.partCode})`} />
+                  {form.productFamily && <ReviewRow label="Família" value={form.productFamily} />}
                   <ReviewRow label="Motivo" value={OCCURRENCE_REASON_LABEL[form.occurrenceReason]} />
                   <ReviewRow label="Prioridade · SLA" value={`${form.priority} · ${form.slaHours}h`} />
                   <ReviewRow label="Contenção" value={contencao.length ? contencao.map((c) => CONTAINMENT_ACTION_LABEL[c]).join(", ") : "—"} />

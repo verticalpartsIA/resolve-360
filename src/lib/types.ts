@@ -5,7 +5,9 @@ export type RootCause =
   | "expedicao"
   | "engenharia"
   | "cliente"
-  | "fornecedor";
+  | "fornecedor"
+  | "produto"
+  | "producao";
 export type TicketChannel = "whatsapp" | "manual";
 
 // ===== v2: FO-OEA-Q-502 =====
@@ -163,6 +165,7 @@ export interface Attachment {
   id: string;
   name: string;
   size: number;
+  url?: string; // blob URL (sessão) ou URL do Supabase Storage
 }
 
 export interface Ticket {
@@ -219,6 +222,7 @@ export interface Ticket {
   audit: AuditLog[];
   assignee?: string;
   internalTicketIds?: string[];
+  productFamily?: string;
 }
 
 export const ROOT_CAUSE_LABEL: Record<RootCause, string> = {
@@ -227,6 +231,8 @@ export const ROOT_CAUSE_LABEL: Record<RootCause, string> = {
   engenharia: "Engenharia",
   cliente: "Cliente",
   fornecedor: "Fornecedor",
+  produto: "Produto",
+  producao: "Produção",
 };
 
 export const RO_PREFIX = "RO";

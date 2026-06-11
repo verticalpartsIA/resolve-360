@@ -354,6 +354,8 @@ function mapTicket(
     audit: audits.map(mapAuditLog),
     assignee: row.assigned_to ?? undefined,
     internalTicketIds: internalIds,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    productFamily: (row as any).product_family ?? undefined,
   };
 }
 
@@ -444,6 +446,7 @@ interface NewTicketInput {
   emitente?: string;
   acaoContencao?: ContainmentAction[];
   whatsappThreadId?: string;
+  productFamily?: string;
 }
 
 interface NewInternalTicketInput {
@@ -595,6 +598,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           sla_hours: input.slaHours,
           whatsapp_thread_id: input.whatsappThreadId ?? null,
           acao_contencao: denormalizeContainmentActions(input.acaoContencao),
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          ...(input.productFamily ? { product_family: input.productFamily } as any : {}),
           created_by: user?.id ?? null,
           assigned_to: user?.id ?? null,
         })
