@@ -1489,44 +1489,32 @@ async function handleSacBackfill(req, res) {
   setImmediate(async () => {
     const stats = { total: 0, processed: 0, skipped: 0, errors: [] };
     try {
-      let pagina = 1;
-      let totalPaginas = 1;
+      // DD/MM/YYYY → YYYY-MM-DD para filtros Supabase REST
+      const toISO = (d) => d.split("/").reverse().join("-");
+      const desde = toISO(dataDe);
+      const ate   = toISO(dataAte);
 
-      while (pagina <= totalPaginas && pagina <= 20) {
-        let data;
+      // Consulta BD_Omie diretamente: pedidos faturados (etapa=60)
+      // filtrados por data_alteracao (= data em que o pedido foi faturado no Omie)
+      const r = await erpFetch(
+        `/omie_orders?select=codigo_pedido_omie,numero_pedido&etapa=eq.60&data_alteracao=gte.${desde}&data_alteracao=lte.${ate}T23:59:59Z&order=data_alteracao.asc&limit=500`
+      );
+      const orders = await r.json().catch(() => []);
+      console.log(`[backfill] ${orders.length} pedidos etapa=60 entre ${desde} e ${ate}`);
+
+      for (const ord of orders) {
+        const codigo = ord.codigo_pedido_omie;
+        if (!codigo) { stats.skipped++; continue; }
+        stats.total++;
         try {
-          data = await omieCall("produtos/pedido", "ListarPedidos", {
-            pagina,
-            registros_por_pagina: 50,
-            apenas_importado_api: "N",
-            etapa: "60",
-            filtrar_por_data_de: dataDe,
-            filtrar_por_data_ate: dataAte,
-          });
+          await ingerirPedidoOmie(Number(codigo), { skipNotify: true });
+          stats.processed++;
+          console.log(`[backfill] ✓ pedido ${ord.numero_pedido} (${codigo})`);
         } catch (e) {
-          console.error(`[backfill] erro ListarPedidos pág.${pagina}:`, e.message);
-          break;
+          stats.errors.push({ numero_pedido: ord.numero_pedido, codigo, error: e.message });
+          console.error(`[backfill] ✗ pedido ${ord.numero_pedido}:`, e.message);
         }
-
-        totalPaginas = data.total_de_paginas ?? data.nTotPag ?? 1;
-        const pedidos = data.pedido ?? data.pedidos ?? [];
-        console.log(`[backfill] pág.${pagina}/${totalPaginas} — ${pedidos.length} pedidos (etapa 60)`);
-
-        for (const ped of pedidos) {
-          const codigoPedido = ped.cabecalho?.codigo_pedido;
-          if (!codigoPedido) { stats.skipped++; continue; }
-          stats.total++;
-          try {
-            await ingerirPedidoOmie(Number(codigoPedido), { skipNotify: true });
-            stats.processed++;
-          } catch (e) {
-            stats.errors.push({ codigo_pedido: codigoPedido, error: e.message });
-            console.error(`[backfill] erro pedido ${codigoPedido}:`, e.message);
-          }
-          // Intervalo entre chamadas para não sobrecarregar a API Omie
-          await new Promise(r => setTimeout(r, 150));
-        }
-        pagina++;
+        await new Promise(r => setTimeout(r, 200));
       }
     } catch (e) {
       console.error("[backfill] erro geral:", e.message);
