@@ -1291,8 +1291,12 @@ async function ingerirPedidoOmie(codigoPedido, { skipNotify = false } = {}) {
   const cliRows = await cliR.json().catch(() => []);
   const clienteId = Array.isArray(cliRows) && cliRows[0]?.id ? cliRows[0].id : null;
 
-  // 4. Upsert NF (chave: codigo_pedido_omie via busca prévia)
-  const nfNumero = pedido.cabecalho.numero_pedido || String(codigoPedido);
+  // 4. Upsert NF — número real da NF extraído de infoCadastro quando disponível
+  const nfNumero = String(
+    pedido.infoCadastro?.nNF || pedido.infoCadastro?.numero_nf ||
+    pedido.cabecalho.numero_pedido || codigoPedido
+  );
+  const chaveNFe = pedido.infoCadastro?.cChaveNFe || pedido.infoCadastro?.chave_nfe || null;
   const existing = await sbFetch(
     `/rest/v1/sac_notas_fiscais?codigo_pedido_omie=eq.${codigoPedido}&select=id&limit=1`,
     { method: "GET" },
@@ -1300,6 +1304,7 @@ async function ingerirPedidoOmie(codigoPedido, { skipNotify = false } = {}) {
 
   const nfBody = {
     nf_numero: nfNumero,
+    chave_nfe: chaveNFe,
     cliente_id: clienteId,
     cnpj_cliente: cnpj,
     razao_social_cliente: cli.razao_social || "—",
@@ -1340,6 +1345,102 @@ async function ingerirPedidoOmie(codigoPedido, { skipNotify = false } = {}) {
   }
 
   console.log(`[sac/omie] pedido ${codigoPedido} → NF ${nfNumero} classe ${classeAbc} (nf_id=${nfId})`);
+  return { nfId, nfNumero, classeAbc };
+}
+
+// Ingestão via nfconsultar/ListarNF — usa o número real da NF (não numero_pedido)
+// nfData = item de nfCadastro[] retornado pela API nfconsultar
+async function ingerirNFOmie(nfData, { skipNotify = false } = {}) {
+  // Número e chave da NF
+  const nfNumero  = String(nfData.compl?.nNumNF || nfData.ide?.nNF || "?");
+  const chaveNFe  = nfData.compl?.cChaveNFe || null;
+  const dataEmissao = parseDateBR(nfData.ide?.dEmi) || new Date().toISOString().slice(0, 10);
+  const valorTotal  = Number(nfData.total?.vNF ?? nfData.total?.vTotTrib ?? 0);
+  const classeAbc   = classificarABC(valorTotal);
+
+  // Destinatário (cliente)
+  const cnpjRaw    = String(nfData.nfDestInt?.cCPFCNPJ || "").replace(/\D/g, "");
+  const razaoSocial = nfData.nfDestInt?.cNome || "—";
+  const codigoOmie  = nfData.nfDestInt?.nCodCli || null;
+
+  // Pedido vinculado (se Omie disponibilizar no campo compl)
+  const codigoPedido = nfData.compl?.nIdPedido ? Number(nfData.compl.nIdPedido) : null;
+
+  // Transportadora (campo transp da NFe)
+  const transportadora = nfData.transp?.transporta?.xNome || null;
+
+  // Dados complementares do cliente via BD_Omie (telefone, email, nome_fantasia)
+  let telefone = null, email = null, nomeFantasia = null;
+  if (cnpjRaw.length >= 11) {
+    try {
+      const mask = cnpjRaw.length === 14
+        ? `${cnpjRaw.slice(0,2)}.${cnpjRaw.slice(2,5)}.${cnpjRaw.slice(5,8)}/${cnpjRaw.slice(8,12)}-${cnpjRaw.slice(12,14)}`
+        : `${cnpjRaw.slice(0,3)}.${cnpjRaw.slice(3,6)}.${cnpjRaw.slice(6,9)}-${cnpjRaw.slice(9,11)}`;
+      const r = await erpFetch(`/PN_Omie?select=telefone,email,nome_fantasia&cnpj_cpf=eq.${_enc(mask)}&limit=1`);
+      if (r.ok) {
+        const rows = await r.json();
+        if (rows[0]) {
+          telefone     = rows[0].telefone    ? String(rows[0].telefone).replace(/\D/g, "") : null;
+          email        = rows[0].email       || null;
+          nomeFantasia = rows[0].nome_fantasia || null;
+        }
+      }
+    } catch (e) { console.error("[ingerirNF] lookup cliente:", e.message); }
+  }
+
+  // Upsert sac_clientes
+  const cliR = await sbFetch("/rest/v1/sac_clientes?on_conflict=cnpj", {
+    method: "POST",
+    headers: { "Prefer": "resolution=merge-duplicates,return=representation" },
+    body: JSON.stringify({
+      cnpj: cnpjRaw, razao_social: razaoSocial, nome_fantasia: nomeFantasia || null,
+      classe_abc: classeAbc, email, telefone, whatsapp: telefone,
+      codigo_omie: codigoOmie, updated_at: new Date().toISOString(),
+    }),
+  });
+  const cliRows  = await cliR.json().catch(() => []);
+  const clienteId = Array.isArray(cliRows) && cliRows[0]?.id ? cliRows[0].id : null;
+
+  // Upsert sac_notas_fiscais (chave idempotente: nf_numero + cnpj_cliente)
+  const existing = await sbFetch(
+    `/rest/v1/sac_notas_fiscais?nf_numero=eq.${_enc(nfNumero)}&cnpj_cliente=eq.${_enc(cnpjRaw)}&select=id&limit=1`,
+    { method: "GET" },
+  ).then((r) => r.json()).catch(() => []);
+
+  const nfBody = {
+    nf_numero: nfNumero, chave_nfe: chaveNFe,
+    cliente_id: clienteId, cnpj_cliente: cnpjRaw, razao_social_cliente: razaoSocial,
+    classe_abc: classeAbc, data_emissao: dataEmissao, valor_total: valorTotal,
+    transportadora, codigo_rastreio: null, previsao_entrega: null,
+    status_entrega: "EMITIDA",
+    codigo_pedido_omie: codigoPedido,
+    dados_omie: nfData,
+    updated_at: new Date().toISOString(),
+  };
+
+  let nfId;
+  if (Array.isArray(existing) && existing[0]?.id) {
+    nfId = existing[0].id;
+    await sbFetch(`/rest/v1/sac_notas_fiscais?id=eq.${nfId}`, {
+      method: "PATCH", body: JSON.stringify(nfBody),
+    });
+  } else {
+    const nfR = await sbFetch("/rest/v1/sac_notas_fiscais", {
+      method: "POST", body: JSON.stringify(nfBody),
+    });
+    const nfRows = await nfR.json().catch(() => []);
+    nfId = Array.isArray(nfRows) && nfRows[0]?.id ? nfRows[0].id : null;
+  }
+
+  // OODA — Classe A: WhatsApp VIP imediato (skipNotify=true no backfill histórico)
+  if (!skipNotify && nfId && classeAbc === "A" && telefone) {
+    const nome = nomeFantasia || razaoSocial;
+    const msg = `Olá, ${nome}! 👋\n\nSou da equipe VerticalParts. Sua NF *${nfNumero}* foi emitida e está sendo preparada para envio.\n\nEstamos à disposição para qualquer dúvida! 🙂`;
+    const ok = await enviarWhatsAppSac(telefone, msg);
+    await registrarLogSac(nfId, "WHATSAPP", "VIP_FOLLOWUP", telefone, msg, ok);
+  }
+
+  console.log(`[sac/nf] NF ${nfNumero} | ${razaoSocial} | ${classeAbc} | R$${valorTotal} (nf_id=${nfId})`);
   return { nfId, nfNumero, classeAbc };
 }
 
@@ -1489,32 +1590,44 @@ async function handleSacBackfill(req, res) {
   setImmediate(async () => {
     const stats = { total: 0, processed: 0, skipped: 0, errors: [] };
     try {
-      // DD/MM/YYYY → YYYY-MM-DD para filtros Supabase REST
-      const toISO = (d) => d.split("/").reverse().join("-");
-      const desde = toISO(dataDe);
-      const ate   = toISO(dataAte);
+      // Usa nfconsultar/ListarNF: filtra por data de EMISSÃO da NF (dEmiInicial/dEmiFinal)
+      // e tpNF=1 (saída = venda). Retorna o número real da NF, chave NFe, etc.
+      let pagina = 1;
+      let totalPaginas = 1;
 
-      // Consulta BD_Omie diretamente: pedidos faturados (etapa=60)
-      // filtrados por data_alteracao (= data em que o pedido foi faturado no Omie)
-      const r = await erpFetch(
-        `/omie_orders?select=codigo_pedido_omie,numero_pedido&etapa=eq.60&data_alteracao=gte.${desde}&data_alteracao=lte.${ate}T23:59:59Z&order=data_alteracao.asc&limit=500`
-      );
-      const orders = await r.json().catch(() => []);
-      console.log(`[backfill] ${orders.length} pedidos etapa=60 entre ${desde} e ${ate}`);
-
-      for (const ord of orders) {
-        const codigo = ord.codigo_pedido_omie;
-        if (!codigo) { stats.skipped++; continue; }
-        stats.total++;
+      while (pagina <= totalPaginas && pagina <= 20) {
+        let data;
         try {
-          await ingerirPedidoOmie(Number(codigo), { skipNotify: true });
-          stats.processed++;
-          console.log(`[backfill] ✓ pedido ${ord.numero_pedido} (${codigo})`);
+          data = await omieCall("produtos/nfconsultar", "ListarNF", {
+            pagina,
+            registros_por_pagina: 50,
+            dEmiInicial: dataDe,
+            dEmiFinal:   dataAte,
+            tpNF: "1",               // saída (venda)
+            filtrar_por_status: "N", // não canceladas
+          });
         } catch (e) {
-          stats.errors.push({ numero_pedido: ord.numero_pedido, codigo, error: e.message });
-          console.error(`[backfill] ✗ pedido ${ord.numero_pedido}:`, e.message);
+          console.error(`[backfill] ListarNF pág.${pagina}:`, e.message);
+          break;
         }
-        await new Promise(r => setTimeout(r, 200));
+
+        totalPaginas = data.total_de_paginas ?? data.nTotPag ?? 1;
+        const nfs = data.nfCadastro ?? data.nfsCadastro ?? [];
+        console.log(`[backfill] ListarNF pág.${pagina}/${totalPaginas} → ${nfs.length} NFs`);
+
+        for (const nf of nfs) {
+          stats.total++;
+          const nfNum = nf.compl?.nNumNF || nf.ide?.nNF || "?";
+          try {
+            await ingerirNFOmie(nf, { skipNotify: true });
+            stats.processed++;
+          } catch (e) {
+            stats.errors.push({ nf_numero: nfNum, error: e.message });
+            console.error(`[backfill] ✗ NF ${nfNum}:`, e.message);
+          }
+          await new Promise(r => setTimeout(r, 200));
+        }
+        pagina++;
       }
     } catch (e) {
       console.error("[backfill] erro geral:", e.message);
