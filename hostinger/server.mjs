@@ -1555,6 +1555,75 @@ async function handleSacEnviarPesquisa(req, res) {
   return json(200, { ok: true, enviado, token });
 }
 
+// ─── Admin — Convidar usuário ─────────────────────────────────────────────────
+// POST /api/admin/invite-user
+// Body: { "email": "...", "role": "operador|qualidade|gestor|admin" }
+// Convida via Supabase Auth Admin. Se usuário já existe (SSO), apenas atribui o papel.
+
+async function handleAdminInviteUser(req, res) {
+  const json = (status, obj) => {
+    res.statusCode = status;
+    res.setHeader("Content-Type", "application/json");
+    res.end(JSON.stringify(obj));
+  };
+
+  if (req.method !== "POST") return json(405, { error: "Method Not Allowed" });
+
+  let email, role;
+  try {
+    const body = JSON.parse(await readBody(req));
+    email = (body.email ?? "").trim().toLowerCase();
+    role  = body.role ?? "operador";
+  } catch { return json(400, { error: "Corpo inválido." }); }
+
+  if (!email || !email.includes("@")) return json(400, { error: "E-mail inválido." });
+  const VALID = ["operador", "qualidade", "gestor", "admin"];
+  if (!VALID.includes(role)) return json(400, { error: "Papel inválido." });
+
+  // 1. Tenta convidar via Supabase Auth Admin
+  const inviteRes = await fetch(`${SB_URL}/auth/v1/invite`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "apikey": SB_SERVICE_KEY(),
+      "Authorization": `Bearer ${SB_SERVICE_KEY()}`,
+    },
+    body: JSON.stringify({
+      email,
+      redirect_to: "https://posvenda360.vpsistema.com/dashboard",
+    }),
+  });
+
+  let userId = null;
+
+  if (inviteRes.ok) {
+    const data = await inviteRes.json().catch(() => ({}));
+    userId = data.id ?? null;
+  } else {
+    // Usuário já existe (ex.: veio do SSO do VPSistema) — busca o ID via RPC
+    const rpcRes = await sbFetch("/rest/v1/rpc/get_user_id_by_email", {
+      method: "POST",
+      body: JSON.stringify({ email_input: email }),
+    });
+    if (rpcRes.ok) {
+      const uid = await rpcRes.json().catch(() => null);
+      userId = uid ?? null;
+    }
+  }
+
+  if (!userId) return json(422, { error: "Não foi possível convidar o usuário. Verifique o e-mail ou tente novamente." });
+
+  // 2. Adiciona o papel (ON CONFLICT ignora se já existir)
+  await sbFetch("/rest/v1/user_roles", {
+    method: "POST",
+    headers: { "Prefer": "resolution=ignore-duplicates,return=minimal" },
+    body: JSON.stringify({ user_id: userId, role }),
+  });
+
+  console.log(`[invite-user] ✓ ${email} → ${role} (${userId})`);
+  return json(200, { ok: true, user_id: userId });
+}
+
 // ─── SAC — Backfill histórico de NFs do Omie ─────────────────────────────────
 // POST /api/sac/backfill
 // Body (opcional): { "data_de": "01/05/2026", "data_ate": "11/06/2026" }
@@ -1729,6 +1798,10 @@ const server = http.createServer(async (req, res) => {
     }
     if (urlPath === "/api/sac/backfill") {
       await handleSacBackfill(req, res);
+      return;
+    }
+    if (urlPath === "/api/admin/invite-user") {
+      await handleAdminInviteUser(req, res);
       return;
     }
 
