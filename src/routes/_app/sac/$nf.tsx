@@ -113,6 +113,8 @@ export default function SacNFDetalhe() {
 
   // Formulário Expedição
   const [exp, setExp] = useState({
+    transportadora: "",
+    codigo_rastreio: "",
     data_coleta: "",
     transportadora_entregou: null as boolean | null,
     data_entrega_real: "",
@@ -170,6 +172,8 @@ export default function SacNFDetalhe() {
       const n = nfData as NFDetalhe;
       setNf(n);
       setExp({
+        transportadora: n.transportadora ?? "",
+        codigo_rastreio: n.codigo_rastreio ?? "",
         data_coleta: n.data_coleta ?? "",
         transportadora_entregou: n.transportadora_entregou ?? null,
         data_entrega_real: n.data_entrega_real ?? "",
@@ -215,6 +219,8 @@ export default function SacNFDetalhe() {
     setSavingExp(true);
     setMsgExp("");
     const { error } = await supabase.from("sac_notas_fiscais").update({
+      transportadora: exp.transportadora || null,
+      codigo_rastreio: exp.codigo_rastreio || null,
       data_coleta: exp.data_coleta || null,
       transportadora_entregou: exp.transportadora_entregou,
       data_entrega_real: exp.data_entrega_real || null,
@@ -385,6 +391,27 @@ export default function SacNFDetalhe() {
                 <option value="ENTREGUE">Entregue</option>
                 <option value="ATRASADA">Atrasada</option>
               </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">Transportadora</label>
+              <input type="text" value={exp.transportadora} placeholder="Ex.: Correios, Jadlog, Sequoia…"
+                onChange={(e) => setExp((p) => ({ ...p, transportadora: e.target.value }))}
+                className="w-full rounded-lg border bg-background px-3 py-2 text-sm" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">Código de rastreio</label>
+              <div className="flex gap-2">
+                <input type="text" value={exp.codigo_rastreio} placeholder="Ex.: AA123456789BR"
+                  onChange={(e) => setExp((p) => ({ ...p, codigo_rastreio: e.target.value.toUpperCase() }))}
+                  className="flex-1 rounded-lg border bg-background px-3 py-2 text-sm font-mono" />
+                {exp.codigo_rastreio && (
+                  <a href={`https://rastreamento.correios.com.br/app/index.php?objetos=${exp.codigo_rastreio}`}
+                    target="_blank" rel="noreferrer"
+                    className="inline-flex items-center gap-1 rounded-lg border px-3 py-2 text-xs font-medium hover:bg-muted shrink-0">
+                    Rastrear
+                  </a>
+                )}
+              </div>
             </div>
             <div>
               <label className="block text-xs font-medium text-muted-foreground mb-1">Data coleta / retirada</label>
