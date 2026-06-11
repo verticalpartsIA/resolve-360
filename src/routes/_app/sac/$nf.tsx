@@ -113,8 +113,10 @@ export default function SacNFDetalhe() {
 
   // Formulário Expedição
   const [exp, setExp] = useState({
+    tipo_entrega: "TRANSPORTADORA" as "TRANSPORTADORA" | "ENTREGA_PROPRIA" | "RETIRADA_CLIENTE",
     transportadora: "",
     codigo_rastreio: "",
+    retirado_por: "",
     data_coleta: "",
     transportadora_entregou: null as boolean | null,
     data_entrega_real: "",
@@ -172,8 +174,10 @@ export default function SacNFDetalhe() {
       const n = nfData as NFDetalhe;
       setNf(n);
       setExp({
+        tipo_entrega: (n as any).tipo_entrega ?? "TRANSPORTADORA",
         transportadora: n.transportadora ?? "",
         codigo_rastreio: n.codigo_rastreio ?? "",
+        retirado_por: (n as any).retirado_por ?? "",
         data_coleta: n.data_coleta ?? "",
         transportadora_entregou: n.transportadora_entregou ?? null,
         data_entrega_real: n.data_entrega_real ?? "",
@@ -219,15 +223,17 @@ export default function SacNFDetalhe() {
     setSavingExp(true);
     setMsgExp("");
     const { error } = await supabase.from("sac_notas_fiscais").update({
-      transportadora: exp.transportadora || null,
-      codigo_rastreio: exp.codigo_rastreio || null,
+      tipo_entrega: exp.tipo_entrega,
+      transportadora: exp.tipo_entrega === "TRANSPORTADORA" ? (exp.transportadora || null) : null,
+      codigo_rastreio: exp.tipo_entrega === "TRANSPORTADORA" ? (exp.codigo_rastreio || null) : null,
+      retirado_por: exp.tipo_entrega === "RETIRADA_CLIENTE" ? (exp.retirado_por || null) : null,
       data_coleta: exp.data_coleta || null,
-      transportadora_entregou: exp.transportadora_entregou,
+      transportadora_entregou: exp.tipo_entrega === "TRANSPORTADORA" ? exp.transportadora_entregou : null,
       data_entrega_real: exp.data_entrega_real || null,
       comprovante_entrega: exp.comprovante_entrega || null,
       status_entrega: exp.status_entrega,
       updated_at: new Date().toISOString(),
-    }).eq("id", nfId);
+    } as any).eq("id", nfId);
     setMsgExp(error ? "Erro ao salvar." : "Salvo com sucesso!");
     setSavingExp(false);
   }
@@ -380,6 +386,7 @@ export default function SacNFDetalhe() {
           <h2 className="text-sm font-semibold text-amber-800">Expedição — Confirmação de Entrega</h2>
         </div>
         <div className="p-5 space-y-4">
+          {/* Linha 1: Status + Tipo de entrega */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label className="block text-xs font-medium text-muted-foreground mb-1">Status da entrega</label>
@@ -393,28 +400,59 @@ export default function SacNFDetalhe() {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1">Transportadora</label>
-              <input type="text" value={exp.transportadora} placeholder="Ex.: Correios, Jadlog, Sequoia…"
-                onChange={(e) => setExp((p) => ({ ...p, transportadora: e.target.value }))}
-                className="w-full rounded-lg border bg-background px-3 py-2 text-sm" />
+              <label className="block text-xs font-medium text-muted-foreground mb-1">Tipo de entrega</label>
+              <select value={exp.tipo_entrega}
+                onChange={(e) => setExp((p) => ({ ...p, tipo_entrega: e.target.value as typeof p.tipo_entrega }))}
+                className="w-full rounded-lg border bg-background px-3 py-2 text-sm">
+                <option value="TRANSPORTADORA">Transportadora</option>
+                <option value="ENTREGA_PROPRIA">Entrega própria (VerticalParts)</option>
+                <option value="RETIRADA_CLIENTE">Retirada pelo cliente</option>
+              </select>
             </div>
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1">Código de rastreio</label>
-              <div className="flex gap-2">
-                <input type="text" value={exp.codigo_rastreio} placeholder="Ex.: AA123456789BR"
-                  onChange={(e) => setExp((p) => ({ ...p, codigo_rastreio: e.target.value.toUpperCase() }))}
-                  className="flex-1 rounded-lg border bg-background px-3 py-2 text-sm font-mono" />
-                {exp.codigo_rastreio && (
-                  <a href={`https://rastreamento.correios.com.br/app/index.php?objetos=${exp.codigo_rastreio}`}
-                    target="_blank" rel="noreferrer"
-                    className="inline-flex items-center gap-1 rounded-lg border px-3 py-2 text-xs font-medium hover:bg-muted shrink-0">
-                    Rastrear
-                  </a>
-                )}
+          </div>
+
+          {/* Campos condicionais por tipo */}
+          {exp.tipo_entrega === "TRANSPORTADORA" && (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">Transportadora</label>
+                <input type="text" value={exp.transportadora} placeholder="Ex.: Correios, Jadlog, Sequoia…"
+                  onChange={(e) => setExp((p) => ({ ...p, transportadora: e.target.value }))}
+                  className="w-full rounded-lg border bg-background px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1">Código de rastreio</label>
+                <div className="flex gap-2">
+                  <input type="text" value={exp.codigo_rastreio} placeholder="Ex.: AA123456789BR"
+                    onChange={(e) => setExp((p) => ({ ...p, codigo_rastreio: e.target.value.toUpperCase() }))}
+                    className="flex-1 rounded-lg border bg-background px-3 py-2 text-sm font-mono" />
+                  {exp.codigo_rastreio && (
+                    <a href={`https://rastreamento.correios.com.br/app/index.php?objetos=${exp.codigo_rastreio}`}
+                      target="_blank" rel="noreferrer"
+                      className="inline-flex items-center gap-1 rounded-lg border px-3 py-2 text-xs font-medium hover:bg-muted shrink-0">
+                      Rastrear
+                    </a>
+                  )}
+                </div>
               </div>
             </div>
+          )}
+
+          {exp.tipo_entrega === "RETIRADA_CLIENTE" && (
             <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1">Data coleta / retirada</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">Quem retirou</label>
+              <input type="text" value={exp.retirado_por} placeholder="Nome completo e documento (RG/CPF)"
+                onChange={(e) => setExp((p) => ({ ...p, retirado_por: e.target.value }))}
+                className="w-full rounded-lg border bg-background px-3 py-2 text-sm" />
+            </div>
+          )}
+
+          {/* Datas + comprovante */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">
+                {exp.tipo_entrega === "RETIRADA_CLIENTE" ? "Data da retirada" : "Data coleta / retirada"}
+              </label>
               <input type="date" value={exp.data_coleta}
                 onChange={(e) => setExp((p) => ({ ...p, data_coleta: e.target.value }))}
                 className="w-full rounded-lg border bg-background px-3 py-2 text-sm" />
@@ -425,18 +463,21 @@ export default function SacNFDetalhe() {
                 onChange={(e) => setExp((p) => ({ ...p, data_entrega_real: e.target.value }))}
                 className="w-full rounded-lg border bg-background px-3 py-2 text-sm" />
             </div>
-            <div>
+            <div className="sm:col-span-2">
               <label className="block text-xs font-medium text-muted-foreground mb-1">Comprovante de entrega</label>
               <input type="text" value={exp.comprovante_entrega} placeholder="Código, protocolo ou observação"
                 onChange={(e) => setExp((p) => ({ ...p, comprovante_entrega: e.target.value }))}
                 className="w-full rounded-lg border bg-background px-3 py-2 text-sm" />
             </div>
           </div>
-          <div>
-            <label className="block text-xs font-medium text-muted-foreground mb-2">Transportadora entregou?</label>
-            <SimNao value={exp.transportadora_entregou}
-              onChange={(v) => setExp((p) => ({ ...p, transportadora_entregou: v }))} />
-          </div>
+
+          {exp.tipo_entrega === "TRANSPORTADORA" && (
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-2">Transportadora entregou?</label>
+              <SimNao value={exp.transportadora_entregou}
+                onChange={(v) => setExp((p) => ({ ...p, transportadora_entregou: v }))} />
+            </div>
+          )}
           <div className="flex items-center gap-3 border-t pt-4">
             <button onClick={salvarExpedicao} disabled={savingExp}
               className="inline-flex items-center gap-2 rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700 disabled:opacity-50">
