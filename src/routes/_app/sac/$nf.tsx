@@ -2,7 +2,7 @@ import { createFileRoute, useParams, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
-import { ArrowLeft, Save, Truck, MessageCircle, Phone, CheckCircle2, Clock, Package, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Save, Truck, MessageCircle, Phone, CheckCircle2, Clock, Package, AlertTriangle, Send } from "lucide-react";
 
 export const Route = createFileRoute("/_app/sac/$nf")({
   component: SacNFDetalhe,
@@ -30,6 +30,7 @@ type NFDetalhe = {
   status_pos_venda: "PENDENTE" | "EM_ANDAMENTO" | "CONCLUIDO";
   data_pos_venda: string | null;
   responsavel_pos_venda: string | null;
+  obs_omie: string | null;
   sac_clientes: {
     nome_fantasia: string | null;
     whatsapp: string | null;
@@ -159,13 +160,18 @@ export default function SacNFDetalhe() {
   const [savingPesq, setSavingPesq] = useState(false);
   const [msgPesq, setMsgPesq] = useState("");
 
+  // Observações para Omie
+  const [obsOmie, setObsOmie] = useState("");
+  const [savingObs, setSavingObs] = useState(false);
+  const [msgObs, setMsgObs] = useState("");
+
   useEffect(() => { void carregar(); }, [nfId]);
 
   async function carregar() {
     setLoading(true);
     const [{ data: nfData }, { data: pesquisaData }] = await Promise.all([
       supabase.from("sac_notas_fiscais")
-        .select("*, sac_clientes(nome_fantasia,whatsapp,email,telefone,contato)")
+        .select("*, obs_omie, sac_clientes(nome_fantasia,whatsapp,email,telefone,contato)")
         .eq("id", nfId).single(),
       supabase.from("sac_pesquisas").select("*").eq("nf_id", nfId).maybeSingle(),
     ]);
@@ -195,6 +201,7 @@ export default function SacNFDetalhe() {
         email: n.sac_clientes?.email ?? "",
         contato_nome: n.sac_clientes?.contato ?? "",
       });
+      setObsOmie(n.obs_omie ?? "");
     }
 
     if (pesquisaData) {
@@ -276,6 +283,24 @@ export default function SacNFDetalhe() {
     }).eq("id", nfId);
     setMsgSac(error ? "Erro ao salvar." : "Salvo com sucesso!");
     setSavingSac(false);
+  }
+
+  async function enviarObsOmie() {
+    if (!obsOmie.trim()) return;
+    setSavingObs(true);
+    setMsgObs("");
+    try {
+      const res = await fetch("/api/sac/omie-obs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nf_id: nfId, obs: obsOmie }),
+      });
+      const data = await res.json() as { error?: string };
+      setMsgObs(!res.ok ? (data.error ?? "Erro ao enviar.") : "Enviado para o Omie com sucesso!");
+    } catch {
+      setMsgObs("Erro de conexão com o servidor.");
+    }
+    setSavingObs(false);
   }
 
   async function salvarPesquisa() {
@@ -497,6 +522,43 @@ export default function SacNFDetalhe() {
               <Save className="h-4 w-4" />{savingExp ? "Salvando..." : "Salvar Expedição"}
             </button>
             {msgExp && <span className="text-sm text-muted-foreground">{msgExp}</span>}
+          </div>
+        </div>
+      </div>
+
+      {/* ─── SEÇÃO 1b: OBSERVAÇÕES PARA OMIE ─── */}
+      <div className="rounded-xl border border-orange-200 bg-card overflow-hidden">
+        <div className="flex items-center gap-2 border-b bg-orange-50 px-5 py-3">
+          <Send className="h-4 w-4 text-orange-600" />
+          <h2 className="text-sm font-semibold text-orange-800">Observações → Omie</h2>
+          <span className="ml-auto text-[11px] text-orange-500 font-medium">Enviado ao pedido no ERP</span>
+        </div>
+        <div className="p-5 space-y-3">
+          <p className="text-xs text-muted-foreground">
+            O texto abaixo será <strong>anexado</strong> ao campo Observações do pedido no Omie (aba Observações da Proposta Comercial).
+            Campos internos do pós-venda ficam apenas no site.
+          </p>
+          <textarea
+            rows={4}
+            value={obsOmie}
+            onChange={(e) => setObsOmie(e.target.value)}
+            placeholder={"Ex.: EXP confirmou entrega em 12/06/2026. Cliente recebeu e assinou comprovante."}
+            className="w-full rounded-lg border bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-orange-400"
+          />
+          <div className="flex items-center gap-3">
+            <button
+              onClick={enviarObsOmie}
+              disabled={savingObs || !obsOmie.trim()}
+              className="inline-flex items-center gap-2 rounded-lg bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700 disabled:opacity-50"
+            >
+              <Send className="h-4 w-4" />
+              {savingObs ? "Enviando..." : "Enviar para Omie"}
+            </button>
+            {msgObs && (
+              <span className={cn("text-sm", msgObs.startsWith("Erro") ? "text-red-600" : "text-green-600")}>
+                {msgObs}
+              </span>
+            )}
           </div>
         </div>
       </div>

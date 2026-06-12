@@ -1625,6 +1625,95 @@ async function handleAdminInviteUser(req, res) {
 }
 
 // ─── SAC — Backfill histórico de NFs do Omie ─────────────────────────────────
+// POST /api/sac/omie-obs
+// Body: { nf_id: string, obs: string }
+// Consulta o pedido Omie vinculado, ANEXA a obs ao campo obs_venda e salva localmente.
+
+async function handleSacOmieObs(req, res) {
+  const json = (s, o) => {
+    res.statusCode = s;
+    res.setHeader("Content-Type", "application/json");
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.end(JSON.stringify(o));
+  };
+
+  if (req.method === "OPTIONS") {
+    res.statusCode = 204;
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    return res.end();
+  }
+  if (req.method !== "POST") return json(405, { error: "Method Not Allowed" });
+
+  let payload;
+  try { payload = JSON.parse(await readBody(req)); }
+  catch { return json(400, { error: "Invalid JSON" }); }
+
+  const { nf_id, obs } = payload ?? {};
+  if (!nf_id || typeof obs !== "string" || !obs.trim()) {
+    return json(400, { error: "nf_id e obs são obrigatórios" });
+  }
+
+  // Buscar codigo_pedido_omie
+  const nfRows = await sbFetch(
+    `/rest/v1/sac_notas_fiscais?id=eq.${encodeURIComponent(nf_id)}&select=codigo_pedido_omie&limit=1`,
+    { method: "GET" },
+  ).then((r) => r.json()).catch(() => []);
+  const nf = Array.isArray(nfRows) ? nfRows[0] : null;
+  if (!nf) return json(404, { error: "NF não encontrada" });
+  if (!nf.codigo_pedido_omie) {
+    return json(422, { error: "NF sem pedido Omie vinculado. Use o Backfill para importar via Omie." });
+  }
+
+  const codigoPedido = Number(nf.codigo_pedido_omie);
+  const dataHoje = new Date().toLocaleDateString("pt-BR");
+  const novaLinha = `PV360 ${dataHoje}: ${obs.trim()}`;
+
+  try {
+    // 1. Busca obs atual no Omie para não sobrescrever outras áreas
+    let obsAtual = "";
+    try {
+      const pedR = await omieCall("produtos/pedido", "ConsultarPedido", { codigo_pedido: codigoPedido });
+      obsAtual = pedR.pedido_venda_produto?.informacoes_adicionais?.obs_venda ?? "";
+    } catch (e) {
+      console.warn("[sac/omie-obs] ConsultarPedido falhou, enviando só nova obs:", e.message);
+    }
+
+    const obsCompleta = obsAtual ? `${obsAtual}\n${novaLinha}` : novaLinha;
+
+    // 2. Tenta AlterarPedFaturado (pedidos já faturados/NF emitida)
+    try {
+      await omieCall("produtos/pedido", "AlterarPedFaturado", {
+        codigo_pedido: codigoPedido,
+        informacoes_adicionais: { obs_venda: obsCompleta },
+      });
+    } catch (e1) {
+      console.log(`[sac/omie-obs] AlterarPedFaturado falhou (${e1.message}), tentando AlterarPedidoVenda`);
+      // Fallback: consulta pedido completo e altera
+      const pedR2 = await omieCall("produtos/pedido", "ConsultarPedido", { codigo_pedido: codigoPedido });
+      const pedido = pedR2.pedido_venda_produto;
+      if (!pedido) throw new Error("Pedido Omie não encontrado");
+      pedido.informacoes_adicionais = {
+        ...(pedido.informacoes_adicionais ?? {}),
+        obs_venda: obsCompleta,
+      };
+      await omieCall("produtos/pedido", "AlterarPedidoVenda", { pedido_venda_produto: pedido });
+    }
+
+    // 3. Salva localmente o que foi enviado
+    await sbFetch(`/rest/v1/sac_notas_fiscais?id=eq.${encodeURIComponent(nf_id)}`, {
+      method: "PATCH",
+      body: JSON.stringify({ obs_omie: obs.trim(), updated_at: new Date().toISOString() }),
+    });
+
+    return json(200, { ok: true });
+  } catch (e) {
+    console.error("[sac/omie-obs] Erro:", e.message);
+    return json(500, { error: `Erro ao atualizar Omie: ${e.message}` });
+  }
+}
+
 // POST /api/sac/backfill
 // Body (opcional): { "data_de": "01/05/2026", "data_ate": "11/06/2026" }
 // Busca pedidos faturados (etapa=60) no Omie e ingere no sac_notas_fiscais.
@@ -1794,6 +1883,10 @@ const server = http.createServer(async (req, res) => {
     }
     if (urlPath === "/api/sac/enviar-pesquisa") {
       await handleSacEnviarPesquisa(req, res);
+      return;
+    }
+    if (urlPath === "/api/sac/omie-obs") {
+      await handleSacOmieObs(req, res);
       return;
     }
     if (urlPath === "/api/sac/backfill") {
