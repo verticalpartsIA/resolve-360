@@ -1810,23 +1810,30 @@ async function handleSacOmieObs(req, res) {
 
     const obsCompleta = obsAtual ? `${obsAtual}\n${novaLinha}` : novaLinha;
 
-    // 2. Tenta AlterarPedFaturado (pedidos já faturados/NF emitida)
+    // 2. AlterarPedFaturado — estrutura correta: pedido_venda_produto wrapper
+    // Tenta primeiro com wrapper (padrão da API Omie para pedidos faturados)
+    // Se falhar, tenta com parâmetros planos (formato alternativo documentado)
+    let alterado = false;
     try {
       await omieCall("produtos/pedido", "AlterarPedFaturado", {
-        codigo_pedido: codigoPedido,
-        observacoes: { obs_venda: obsCompleta },
+        pedido_venda_produto: {
+          cabecalho: { codigo_pedido: codigoPedido },
+          observacoes: { obs_venda: obsCompleta },
+        },
       });
+      alterado = true;
     } catch (e1) {
-      console.log(`[sac/omie-obs] AlterarPedFaturado falhou (${e1.message}), tentando AlterarPedidoVenda`);
-      // Fallback: consulta pedido completo e altera
-      const pedR2 = await omieCall("produtos/pedido", "ConsultarPedido", { codigo_pedido: codigoPedido });
-      const pedido = pedR2.pedido_venda_produto;
-      if (!pedido) throw new Error("Pedido Omie não encontrado");
-      pedido.observacoes = {
-        ...(pedido.observacoes ?? {}),
-        obs_venda: obsCompleta,
-      };
-      await omieCall("produtos/pedido", "AlterarPedidoVenda", { pedido_venda_produto: pedido });
+      console.log(`[sac/omie-obs] AlterarPedFaturado wrapper falhou (${e1.message}), tentando formato plano`);
+      try {
+        await omieCall("produtos/pedido", "AlterarPedFaturado", {
+          codigo_pedido: codigoPedido,
+          obs_venda: obsCompleta,
+        });
+        alterado = true;
+      } catch (e2) {
+        console.error(`[sac/omie-obs] AlterarPedFaturado formato plano também falhou: ${e2.message}`);
+        throw new Error(`Omie não aceitou a alteração: ${e2.message}`);
+      }
     }
 
     // 3. Salva localmente o que foi enviado
