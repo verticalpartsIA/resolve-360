@@ -2,7 +2,7 @@ import { createFileRoute, useParams, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
-import { ArrowLeft, Save, Truck, MessageCircle, Phone, CheckCircle2, Clock, Package, AlertTriangle, Send } from "lucide-react";
+import { ArrowLeft, Save, Truck, MessageCircle, Phone, CheckCircle2, Clock, Package, AlertTriangle, Send, Eye, EyeOff } from "lucide-react";
 
 export const Route = createFileRoute("/_app/sac/$nf")({
   component: SacNFDetalhe,
@@ -160,6 +160,9 @@ export default function SacNFDetalhe() {
   });
   const [savingPesq, setSavingPesq] = useState(false);
   const [msgPesq, setMsgPesq] = useState("");
+
+  // Valor sempre oculto ao abrir
+  const [showValor, setShowValor] = useState(false);
 
   // Observações para Omie
   const [obsOmie, setObsOmie] = useState("");
@@ -360,7 +363,18 @@ export default function SacNFDetalhe() {
           <p className="text-sm text-muted-foreground mt-0.5">{nomeCliente} — CNPJ {nf.cnpj_cliente}</p>
         </div>
         <div className="text-right shrink-0">
-          <div className="text-xl font-semibold">{fmt(nf.valor_total ?? 0)}</div>
+          <div className="flex items-center justify-end gap-1.5">
+            <span className={cn("text-xl font-semibold tabular-nums transition-all", !showValor && "blur-sm select-none")}>
+              {fmt(nf.valor_total ?? 0)}
+            </span>
+            <button
+              onClick={() => setShowValor((v) => !v)}
+              className="rounded p-1 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              title={showValor ? "Ocultar valor" : "Exibir valor"}
+            >
+              {showValor ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+            </button>
+          </div>
           <div className="text-xs text-muted-foreground">Emissão {fmtDate(nf.data_emissao)}</div>
         </div>
       </div>

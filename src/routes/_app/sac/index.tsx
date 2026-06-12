@@ -142,7 +142,6 @@ export default function SacPipeline() {
                 <th className="px-4 py-3 text-left">Nº Pedido</th>
                 <th className="px-4 py-3 text-left">Cliente</th>
                 <th className="px-4 py-3 text-center">Classe</th>
-                <th className="px-4 py-3 text-right">Valor</th>
                 <th className="px-4 py-3 text-left">Emissão</th>
                 <th className="px-4 py-3 text-left">Previsão</th>
                 <th className="px-4 py-3 text-left">Status</th>
@@ -169,7 +168,6 @@ export default function SacPipeline() {
                         {nf.classe_abc}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-right font-medium tabular-nums">{fmt(nf.valor_total ?? 0)}</td>
                     <td className="px-4 py-3 tabular-nums">{nf.data_emissao ? new Date(nf.data_emissao + "T12:00:00").toLocaleDateString("pt-BR") : "—"}</td>
                     <td className="px-4 py-3 tabular-nums">{nf.previsao_entrega ? new Date(nf.previsao_entrega + "T12:00:00").toLocaleDateString("pt-BR") : "—"}</td>
                     <td className="px-4 py-3">
