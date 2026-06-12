@@ -31,6 +31,7 @@ type NFDetalhe = {
   data_pos_venda: string | null;
   responsavel_pos_venda: string | null;
   obs_omie: string | null;
+  numero_pedido_omie: string | null;
   sac_clientes: {
     nome_fantasia: string | null;
     whatsapp: string | null;
@@ -345,7 +346,12 @@ export default function SacNFDetalhe() {
         </Link>
         <div className="flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-xl font-semibold">NF {nf.nf_numero}</h1>
+            <h1 className="text-xl font-semibold">
+              Pedido {nf.numero_pedido_omie ?? nf.nf_numero}
+            </h1>
+            {nf.numero_pedido_omie && nf.nf_numero !== nf.numero_pedido_omie && (
+              <span className="text-xs text-muted-foreground font-mono">NF {nf.nf_numero}</span>
+            )}
             <span className={cn("rounded-full px-2.5 py-0.5 text-[11px] font-bold", ABC_CLS[nf.classe_abc])}>Classe {nf.classe_abc}</span>
             <span className={cn("inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium", cfg.cls)}>
               <StatusIcon className="h-3 w-3" />{cfg.label}

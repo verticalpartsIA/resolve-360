@@ -12,6 +12,7 @@ export const Route = createFileRoute("/_app/sac/")({
 type SacNF = {
   id: string;
   nf_numero: string;
+  numero_pedido_omie: string | null;
   razao_social_cliente: string;
   classe_abc: "A" | "B" | "C";
   valor_total: number;
@@ -57,7 +58,7 @@ export default function SacPipeline() {
     setLoading(true);
     const { data } = await supabase
       .from("sac_notas_fiscais")
-      .select("id,nf_numero,razao_social_cliente,classe_abc,valor_total,data_emissao,previsao_entrega,status_entrega,status_pos_venda,transportadora,codigo_rastreio,pesquisa_enviada")
+      .select("id,nf_numero,numero_pedido_omie,razao_social_cliente,classe_abc,valor_total,data_emissao,previsao_entrega,status_entrega,status_pos_venda,transportadora,codigo_rastreio,pesquisa_enviada")
       .order("data_emissao", { ascending: false })
       .limit(200);
     setNfs((data as SacNF[]) ?? []);
@@ -138,7 +139,7 @@ export default function SacPipeline() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b bg-muted/30 text-xs font-medium text-muted-foreground">
-                <th className="px-4 py-3 text-left">NF</th>
+                <th className="px-4 py-3 text-left">Nº Pedido</th>
                 <th className="px-4 py-3 text-left">Cliente</th>
                 <th className="px-4 py-3 text-center">Classe</th>
                 <th className="px-4 py-3 text-right">Valor</th>
@@ -156,7 +157,12 @@ export default function SacPipeline() {
                 const Icon = cfg.icon;
                 return (
                   <tr key={nf.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
-                    <td className="px-4 py-3 font-mono font-medium">{nf.nf_numero}</td>
+                    <td className="px-4 py-3">
+                      <span className="font-semibold tabular-nums">{nf.numero_pedido_omie ?? "—"}</span>
+                      {nf.nf_numero && nf.nf_numero !== nf.numero_pedido_omie && (
+                        <span className="block text-[10px] text-muted-foreground font-mono">NF {nf.nf_numero}</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3 max-w-[200px] truncate">{nf.razao_social_cliente}</td>
                     <td className="px-4 py-3 text-center">
                       <span className={cn("rounded-full px-2.5 py-0.5 text-[11px] font-bold", ABC_COLORS[nf.classe_abc])}>

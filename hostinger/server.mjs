@@ -1316,6 +1316,7 @@ async function ingerirPedidoOmie(codigoPedido, { skipNotify = false } = {}) {
     previsao_entrega: parseDateBR(pedido.frete?.previsao_entrega),
     status_entrega: "EMITIDA",
     codigo_pedido_omie: codigoPedido,
+    numero_pedido_omie: pedido.cabecalho?.numero_pedido ? String(pedido.cabecalho.numero_pedido) : (codigoPedido ? String(codigoPedido) : null),
     dados_omie: pedido,
     updated_at: new Date().toISOString(),
   };
@@ -1417,6 +1418,7 @@ async function ingerirNFOmie(nfData, { skipNotify = false } = {}) {
     transportadora, codigo_rastreio: null, previsao_entrega: null,
     status_entrega: "EMITIDA",
     codigo_pedido_omie: codigoPedido,
+    numero_pedido_omie: codigoPedido ? String(codigoPedido) : null,
     dados_omie: nfData,
     updated_at: new Date().toISOString(),
   };
