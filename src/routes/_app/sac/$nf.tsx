@@ -1,6 +1,7 @@
 import { createFileRoute, useParams, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import { ArrowLeft, Save, Truck, MessageCircle, Phone, CheckCircle2, Clock, Package, AlertTriangle, Send, Eye, EyeOff, ClipboardList } from "lucide-react";
 
@@ -117,6 +118,7 @@ function Estrelas({ value, onChange }: { value: number | null; onChange: (v: num
 
 export default function SacNFDetalhe() {
   const { nf: nfId } = useParams({ from: "/_app/sac/$nf" });
+  const { user } = useAuth();
   const [nf, setNf] = useState<NFDetalhe | null>(null);
   const [pesquisa, setPesquisa] = useState<Pesquisa | null>(null);
   const [loading, setLoading] = useState(true);
@@ -245,6 +247,19 @@ export default function SacNFDetalhe() {
     setLoading(false);
   }
 
+  async function writeAuditSac(action: string, payload?: Record<string, unknown>) {
+    await supabase.from("audit_log").insert({
+      entity_type: "sac_nf",
+      entity_id: nfId,
+      action,
+      actor_id: user?.id ?? null,
+      actor_name: user?.email ?? null,
+      payload: payload ?? null,
+    }).then(({ error }) => {
+      if (error) console.error("[sac-audit]", error);
+    });
+  }
+
   async function salvarExpedicao() {
     // Poka-Yoke: bloqueia se conferência incompleta ou divergência não reportada
     const itensGuard = ((nf as any)?.dados_omie?.det ?? []) as OmieItem[];
@@ -278,6 +293,7 @@ export default function SacNFDetalhe() {
       return;
     }
 
+    void writeAuditSac("expedicao_salva", { status_entrega: exp.status_entrega, tipo_entrega: exp.tipo_entrega });
     setMsgExp("Salvo! Criando tarefa no VP Click...");
     const { error: fnErr } = await supabase.functions.invoke("pv360-delivery-event", {
       body: { nf_id: nfId },
@@ -311,6 +327,7 @@ export default function SacNFDetalhe() {
       responsavel_pos_venda: sac.responsavel_pos_venda || null,
       updated_at: new Date().toISOString(),
     }).eq("id", nfId);
+    if (!error) void writeAuditSac("sac_salvo", { status_pos_venda: sac.status_pos_venda, responsavel: sac.responsavel_pos_venda || null });
     if (!error && sac.status_pos_venda === "CONCLUIDO") {
       await fetch("/api/sac/vpclick-concluir", {
         method: "POST",
@@ -333,6 +350,7 @@ export default function SacNFDetalhe() {
         body: JSON.stringify({ nf_id: nfId, obs: obsOmie }),
       });
       const data = await res.json() as { error?: string };
+      if (res.ok) void writeAuditSac("obs_enviada_omie", { obs_preview: obsOmie.slice(0, 100) });
       setMsgObs(!res.ok ? (data.error ?? "Erro ao enviar.") : "Enviado para o Omie com sucesso!");
     } catch {
       setMsgObs("Erro de conexão com o servidor.");
@@ -367,7 +385,14 @@ export default function SacNFDetalhe() {
         body: JSON.stringify({ nf_id: nfId, itens: payload, obs_divergencia: obsDiv }),
       });
       if (!res.ok) { setMsgDiv("Erro ao reportar divergência."); }
-      else { setDivergenciaReportada(true); setMsgDiv("Divergência reportada — time notificado."); }
+      else {
+        setDivergenciaReportada(true);
+        setMsgDiv("Divergência reportada — time notificado.");
+        void writeAuditSac("divergencia_reportada", {
+          qtd_divergentes: payload.filter((p) => p.divergencia_tipo).length,
+          itens: payload.filter((p) => p.divergencia_tipo).map((p) => ({ sku: p.sku, descricao: p.descricao, divergencia_tipo: p.divergencia_tipo })),
+        });
+      }
     } catch { setMsgDiv("Erro de conexão."); }
     setReportandoDiv(false);
   }
