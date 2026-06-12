@@ -1677,7 +1677,7 @@ async function handleSacOmieObs(req, res) {
     let obsAtual = "";
     try {
       const pedR = await omieCall("produtos/pedido", "ConsultarPedido", { codigo_pedido: codigoPedido });
-      obsAtual = pedR.pedido_venda_produto?.informacoes_adicionais?.obs_venda ?? "";
+      obsAtual = pedR.pedido_venda_produto?.observacoes?.obs_venda ?? "";
     } catch (e) {
       console.warn("[sac/omie-obs] ConsultarPedido falhou, enviando só nova obs:", e.message);
     }
@@ -1688,7 +1688,7 @@ async function handleSacOmieObs(req, res) {
     try {
       await omieCall("produtos/pedido", "AlterarPedFaturado", {
         codigo_pedido: codigoPedido,
-        informacoes_adicionais: { obs_venda: obsCompleta },
+        observacoes: { obs_venda: obsCompleta },
       });
     } catch (e1) {
       console.log(`[sac/omie-obs] AlterarPedFaturado falhou (${e1.message}), tentando AlterarPedidoVenda`);
@@ -1696,8 +1696,8 @@ async function handleSacOmieObs(req, res) {
       const pedR2 = await omieCall("produtos/pedido", "ConsultarPedido", { codigo_pedido: codigoPedido });
       const pedido = pedR2.pedido_venda_produto;
       if (!pedido) throw new Error("Pedido Omie não encontrado");
-      pedido.informacoes_adicionais = {
-        ...(pedido.informacoes_adicionais ?? {}),
+      pedido.observacoes = {
+        ...(pedido.observacoes ?? {}),
         obs_venda: obsCompleta,
       };
       await omieCall("produtos/pedido", "AlterarPedidoVenda", { pedido_venda_produto: pedido });

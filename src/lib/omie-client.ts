@@ -24,7 +24,8 @@ export type OmiePedido = {
   };
   total_pedido: { valor_total_pedido: number };
   frete?: { codigo_rastreio?: string; previsao_entrega?: string; nome_transportador?: string };
-  informacoes_adicionais?: { obs_venda?: string };
+  informacoes_adicionais?: { dados_adicionais_nf?: string; [key: string]: unknown };
+  observacoes?: { obs_venda?: string };
   infoCadastro?: { faturado?: string; dFat?: string };
   det?: Array<{ produto?: { codigo_produto: number; descricao: string; valor_total: number } }>;
 };
